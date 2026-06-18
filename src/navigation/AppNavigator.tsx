@@ -14,9 +14,9 @@ export const ThemeToggleButton = () => {
   return (
     <TouchableOpacity
       className="w-10 h-10 rounded-full items-center justify-center"
-      style={{
-        backgroundColor: isDark ? '#4F378B' : '#EADDFF',
-      }}
+      // style={{
+      //   backgroundColor: isDark ? '#4F378B' : '#EADDFF',
+      // }}
       onPress={toggleTheme}
     >
       {isDark ? (

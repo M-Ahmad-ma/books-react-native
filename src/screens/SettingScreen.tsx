@@ -11,6 +11,7 @@ import { AppHeader } from '../components';
 import { useColorScheme } from 'nativewind';
 import { useReading } from '../context/ReadingContext';
 import { useWishlist } from '../context/WishlistContext';
+import { ThemeToggleButton } from '@/navigation/AppNavigator';
 
 export default function AboutScreen() {
   const { colorScheme } = useColorScheme();
@@ -25,12 +26,14 @@ export default function AboutScreen() {
         backgroundColor={darkMode ? '#1C1B1F' : '#FFFBFE'}
       />
 
-      <AppHeader title="About" />
+      <AppHeader title="About" rightElement={
+        <ThemeToggleButton />
+      } />
 
       <ScrollView
         className="flex-1"
         contentContainerClassName="pb-16"
-        showsVerticalScrollIndicator={false}
+        // showsVerticalScrollIndicator={false}
       >
         {/* ── Brand ── */}
         <View className="items-center pt-12 pb-8 px-6">

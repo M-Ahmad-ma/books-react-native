@@ -17,7 +17,6 @@ import { ThemeProvider } from '../src/components/ThemeProvider';
 import { SplashScreen } from '../src/components/SplashScreen';
 import { SplashProvider } from '../src/context/SplashContext';
 import '../global.css';
-import { useColorScheme } from 'nativewind';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -96,7 +95,6 @@ const initDatabaseTables = async (db: SQLiteDatabase) => {
 
 function AppContent() {
   const [splashDone, setSplashDone] = useState(Platform.OS === 'web');
-  const { colorScheme } = useColorScheme();
   const { isConnected } = useConnectivity();
 
   if (!isConnected) {
@@ -104,7 +102,7 @@ function AppContent() {
   }
 
   return (
-    <View className='font-display-medium' style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? '#1C1B1F' : '#FFFBFE' }}>
+    <View className="font-display-medium flex-1 bg-md-background-light dark:bg-md-background-dark">
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
@@ -121,33 +119,31 @@ function AppContent() {
 }
 
 export default function RootLayout() {
-  const { colorScheme } = useColorScheme()
-
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? '#1C1B1F' : '#FFFBFE' }}>
-      <BottomSheetModalProvider>
-        <QueryClientProvider client={queryClient}>
-          <SafeAreaProvider>
-            <SQLiteProvider databaseName="books.db" onInit={initDatabaseTables}>
-              <ConnectivityProvider>
-                <WishlistProvider>
-                  <ReadingProvider>
-                    <DownloadsProvider>
-                      <ThemeProvider>
+    <ThemeProvider>
+      <GestureHandlerRootView style={{ flex: 1 }} className="bg-md-background-light dark:bg-md-background-dark">
+        <BottomSheetModalProvider>
+          <QueryClientProvider client={queryClient}>
+            <SafeAreaProvider>
+              <SQLiteProvider databaseName="books.db" onInit={initDatabaseTables}>
+                <ConnectivityProvider>
+                  <WishlistProvider>
+                    <ReadingProvider>
+                      <DownloadsProvider>
                         <ReaderPreferencesProvider>
                           <SplashProvider>
                             <AppContent />
                           </SplashProvider>
                         </ReaderPreferencesProvider>
-                      </ThemeProvider>
-                    </DownloadsProvider>
-                  </ReadingProvider>
-                </WishlistProvider>
-              </ConnectivityProvider>
-            </SQLiteProvider>
-          </SafeAreaProvider>
-        </QueryClientProvider>
-      </BottomSheetModalProvider>
-    </GestureHandlerRootView>
+                      </DownloadsProvider>
+                    </ReadingProvider>
+                  </WishlistProvider>
+                </ConnectivityProvider>
+              </SQLiteProvider>
+            </SafeAreaProvider>
+          </QueryClientProvider>
+        </BottomSheetModalProvider>
+      </GestureHandlerRootView>
+    </ThemeProvider>
   );
 }

@@ -268,7 +268,13 @@ export const ReadingListScreen: React.FC = () => {
       : item.coverUrl || null;
 
     return (
-      <View className="flex-row mx-5 my-2 rounded-[16px] bg-md-surface-light dark:bg-md-surface-dark">
+      <View className="flex-row mx-5 my-2 rounded-[16px] bg-md-bg-light dark:bg-md-surface-dark" style={{
+          elevation: 5,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.15,
+          shadowRadius: 4,
+      }}>
         <TouchableOpacity
           className="flex-row flex-1 p-4"
           onPress={() => handleBookPress(item)}
@@ -331,10 +337,11 @@ export const ReadingListScreen: React.FC = () => {
             console.log('[ReadingList] Delete tapped for:', item.id);
             handleRemoveBook(item);
           }}
-          className="justify-center px-4 py-4"
+           className="w-10 h-10 absolute top-2 right-2 rounded-full items-center justify-center bg-md-errorContainer-light dark:bg-md-errorContainer-dark"
+
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Trash2 size={20} color="#B3261E" />
+          <Trash2 size={18} className='dark:text-md-errorContainer-light' />
         </TouchableOpacity>
       </View>
     );

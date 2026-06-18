@@ -21,12 +21,13 @@ import {
   searchBooks,
   getTrendingBooks,
   filterPublicDomainBooks,
+  isPublicDomainBook,
 } from '../api/openLibrary';
 import { getGutenbergPublicDomainBooks, searchGutenbergBooks, GutenbergBook } from '../api/gutenberg';
 import { Book } from '../types';
 import { ThemeToggleButton } from '../navigation/AppNavigator';
 import { useWishlist } from '../context/WishlistContext';
-import { AppHeader, EmptyState, FeaturedSection, ReadingProgressCard, SectionHeader, HeroSection } from '../components';
+import { AppHeader, EmptyState, FeaturedSection, ReadingProgressCard, SectionHeader, HeroSection, FilterChip } from '../components';
 import { isDesktop, isMobile, isTablet } from '@/utils';
 
 const FILTER_CATEGORIES = [
@@ -137,7 +138,7 @@ export const HomeScreen: React.FC = () => {
 
   const discoverOnlineQuery = useQuery({
     queryKey: ['discover-online'],
-    queryFn: () => getTrendingBooks(15, 0),
+    queryFn: () => getTrendingBooks(10, 0),
   });
 
   const featuredBooks = featuredQuery.data || [];
@@ -212,7 +213,6 @@ export const HomeScreen: React.FC = () => {
   );
 
 
-
   const renderBook = ({ item }: { item: Book; index: number }) => {
     return (
       <BookCard
@@ -251,50 +251,40 @@ export const HomeScreen: React.FC = () => {
   };
 
   const filterChips = (
-    <View className="pb-3 mt-3">
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        className="px-5"
-        contentContainerStyle={{ gap: 8 }}
-      >
-        {FILTER_CATEGORIES.map(filter => {
-          const active = searchMode
-            ? selectedFilter === filter.id
-            : (showPublicDomainOnly ? selectedFilter : premiumFilter) === filter.id;
+  <View className="pb-3 mt-3">
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      className="px-5"
+      contentContainerStyle={{ gap: 8 }}
+    >
+      {FILTER_CATEGORIES.map(filter => {
+        const active = searchMode
+          ? selectedFilter === filter.id
+          : (showPublicDomainOnly ? selectedFilter : premiumFilter) === filter.id;
 
-          return (
-            <TouchableOpacity
-              key={filter.id}
-              onPress={() => {
-                if (searchMode) {
-                  setSelectedFilter(filter.id);
-                } else {
-                  showPublicDomainOnly
-                    ? setSelectedFilter(filter.id)
-                    : setPremiumFilter(filter.id);
-                }
-              }}
-              className={`px-4 py-2 rounded-[20px] ${active
-                ? 'bg-md-primary-light dark:bg-md-primary-dark'
-                : 'bg-md-surfaceVariant-light dark:bg-md-surfaceVariant-dark'
-                }`}
-            >
-              <Text
-                className={`text-md-label-medium font-display-medium ${active
-                  ? 'text-md-onPrimary-light dark:text-md-onPrimary-dark'
-                  : 'text-md-onSurfaceVariant-light dark:text-md-onSurfaceVariant-dark'
-                  }`}
-              >
-                {filter.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-    </View>
-  );
+        const handlePress = () => {
+          if (searchMode) {
+            setSelectedFilter(filter.id);
+          } else if (showPublicDomainOnly) {
+            setSelectedFilter(filter.id);
+          } else {
+            setPremiumFilter(filter.id);
+          }
+        };
 
+        return (
+          <FilterChip
+            key={filter.id}
+            label={filter.label}
+            isActive={active}
+            onPress={handlePress}
+          />
+        );
+      })}
+    </ScrollView>
+  </View>
+);
   const sectionHeaderToggle = (
     <View className="px-5 mb-4 mt-2">
       <View className="flex-row justify-between items-center mb-3">
@@ -316,11 +306,6 @@ export const HomeScreen: React.FC = () => {
             : 'bg-md-secondaryContainer-light dark:bg-md-primary-dark'
             }`}
         >
-          {showPublicDomainOnly ? (
-            <Sparkles size={16} color="#492532" />
-          ) : (
-            <Globe size={16} color="#31111D" />
-          )}
 
           <Text
             className={`ml-2 text-md-label-medium font-medium ${showPublicDomainOnly
@@ -392,6 +377,14 @@ export const HomeScreen: React.FC = () => {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 32 }}
+          onScroll={({ nativeEvent }) => {
+            const { contentOffset, contentSize, layoutMeasurement } = nativeEvent;
+            const distanceFromBottom = contentSize.height - contentOffset.y - layoutMeasurement.height;
+            if (distanceFromBottom < 200 && !isFetchingMore) {
+              loadMore();
+            }
+          }}
+          scrollEventThrottle={16}
         >
           {!searchMode && (
             <HeroSection
@@ -470,10 +463,9 @@ export const HomeScreen: React.FC = () => {
             <ReadingProgressCard />
           )}
 
-          {filterChips}
 
           {/* Discover Online - mobile only */}
-          {!searchMode && mobile && discoverOnlineBooks.length > 0 && (
+          {!searchMode && mobile && discoverOnlineBooks.length > 0 ? (
             <View className="mb-2">
               <SectionHeader title="Discover Online" />
               <ScrollView
@@ -493,7 +485,12 @@ export const HomeScreen: React.FC = () => {
                 ))}
               </ScrollView>
             </View>
+          ) : (
+            <SkeletonGrid />
           )}
+
+
+          {filterChips}
 
           {sectionHeaderToggle}
           {bookGrid}
