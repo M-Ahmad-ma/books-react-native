@@ -9,8 +9,10 @@ import {
   useWindowDimensions,
   Platform,
 } from 'react-native';
+
 import { useRouter } from 'expo-router';
-import { Globe, Sparkles } from 'lucide-react-native';
+import { Filter } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { SearchBar } from '../components/SearchBar';
@@ -62,9 +64,9 @@ const mapGutenbergToBook = (gb: GutenbergBook): Book =>
   }) as Book;
 
 export const HomeScreen: React.FC = () => {
-  const router = useRouter();
   const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
   const { width } = useWindowDimensions()
+  const router = useRouter();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -73,6 +75,8 @@ export const HomeScreen: React.FC = () => {
   const mobile = isMobile(width)
   const tablet = isTablet(width)
   const Desktop = isDesktop(width)
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
 
   useEffect(() => {
     return () => {
@@ -84,6 +88,20 @@ export const HomeScreen: React.FC = () => {
   const [premiumFilter, setPremiumFilter] = useState('all');
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [bottomSheetVisible, setBottomSheetVisible] = useState(false);
+
+  const handleReadNow = useCallback(() => {
+    if (selectedBook?.key) {
+      router.push({ pathname: '/reader/[id]', params: { id: selectedBook.key } });
+    }
+  }, [router, selectedBook?.key]);
+
+  const handleSeeAllReading = useCallback(() => {
+    router.push('/reading-list');
+  }, [router]);
+
+  const handleBookReadingPress = useCallback((book: any) => {
+    router.push({ pathname: '/reader/[id]', params: { id: book.id } });
+  }, [router]);
 
   const trendingQuery = useInfiniteQuery({
     queryKey: ['trending', premiumFilter],
@@ -251,75 +269,80 @@ export const HomeScreen: React.FC = () => {
   };
 
   const filterChips = (
-  <View className="pb-3 mt-3">
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      className="px-5"
-      contentContainerStyle={{ gap: 8 }}
-    >
-      {FILTER_CATEGORIES.map(filter => {
-        const active = searchMode
-          ? selectedFilter === filter.id
-          : (showPublicDomainOnly ? selectedFilter : premiumFilter) === filter.id;
+    <View className="pb-3 mt-3">
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        className="px-5"
+        contentContainerStyle={{ gap: 8 }}
+      >
+        {FILTER_CATEGORIES.map(filter => {
+          const active = searchMode
+            ? selectedFilter === filter.id
+            : (showPublicDomainOnly ? selectedFilter : premiumFilter) === filter.id;
 
-        const handlePress = () => {
-          if (searchMode) {
-            setSelectedFilter(filter.id);
-          } else if (showPublicDomainOnly) {
-            setSelectedFilter(filter.id);
-          } else {
-            setPremiumFilter(filter.id);
-          }
-        };
+          const handlePress = () => {
+            if (searchMode) {
+              setSelectedFilter(filter.id);
+            } else if (showPublicDomainOnly) {
+              setSelectedFilter(filter.id);
+            } else {
+              setPremiumFilter(filter.id);
+            }
+          };
 
-        return (
-          <FilterChip
-            key={filter.id}
-            label={filter.label}
-            isActive={active}
-            onPress={handlePress}
-          />
-        );
-      })}
-    </ScrollView>
-  </View>
-);
+          return (
+            <FilterChip
+              key={filter.id}
+              label={filter.label}
+              isActive={active}
+              onPress={handlePress}
+            />
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+
   const sectionHeaderToggle = (
-    <View className="px-5 mb-4 mt-2">
+    <View className="px-5 mb-4 mt-2 border-none">
       <View className="flex-row justify-between items-center mb-3">
-        <View className="flex-row items-center gap-3">
-          <Text className="text-2xl text-md-onSurface-light dark:text-md-onSurface-dark font-semibold">
-            {searchMode ? 'Search Results' : showPublicDomainOnly ? 'Free Books' : 'Trending'}
-          </Text>
+        <Text className="text-md-title-medium text-md-onSurface-light dark:text-md-onSurface-dark font-semibold">
+          {searchMode ? 'Search Results' : showPublicDomainOnly ? 'Free Books' : 'Trending'}
+        </Text>
 
-        </View>
-
+        {/* Filter source toggle */}
         <TouchableOpacity
           onPress={() => {
-            setShowPublicDomainOnly(!showPublicDomainOnly);
+            setShowPublicDomainOnly(prev => !prev);
             setSearchMode(false);
             setSearchQuery('');
           }}
-          className={`flex-row items-center px-4 py-2 rounded-full ${showPublicDomainOnly
-            ? 'bg-md-primaryContainer-light dark:bg-md-primary-dark'
-            : 'bg-md-secondaryContainer-light dark:bg-md-primary-dark'
-            }`}
+          className={`flex-row items-center px-3 py-1.5 rounded-full ${
+            showPublicDomainOnly
+              ? 'bg-md-primaryContainer-light dark:bg-md-primaryContainer-dark'
+              : 'bg-md-surfaceVariant-light dark:bg-md-surfaceVariant-dark'
+          }`}
+          activeOpacity={0.7}
         >
-
-          <Text
-            className={`ml-2 text-md-label-medium font-medium ${showPublicDomainOnly
-              ? 'text-md-onSecondaryContainer-light dark:text-md-onSurface-light'
-              : 'text-md-onTertiaryContainer-light dark:text-md-onSurface-light'
-              }`}
-          >
-            {showPublicDomainOnly ? 'OpenLibrary' : 'Gutendex'}
+          <Filter
+            size={16}
+            color={showPublicDomainOnly
+              ? (isDark ? '#D0BCFF' : '#6750A4')
+              : (isDark ? '#CAC4D0' : '#49454F')
+            }
+          />
+          <Text className={`text-md-label-medium ml-1.5 ${
+            showPublicDomainOnly
+              ? 'text-md-onPrimaryContainer-light dark:text-md-onPrimaryContainer-dark'
+              : 'text-md-onSurfaceVariant-light dark:text-md-onSurfaceVariant-dark'
+          }`}>
+            {showPublicDomainOnly ? 'Gutenberg' : 'OpenLibrary'}
           </Text>
         </TouchableOpacity>
       </View>
     </View>
   );
-
   const cardWidth = Desktop ? '23%' : mobile ? '48%' : '32%';
 
   const bookGrid = (
@@ -352,7 +375,7 @@ export const HomeScreen: React.FC = () => {
           </View>
 
           {isFetchingMore && (
-            <View className="py-6 px-5">
+            <View className="py-6 ">
               <SkeletonGrid />
             </View>
           )}
@@ -403,6 +426,7 @@ export const HomeScreen: React.FC = () => {
           book={selectedBook}
           visible={bottomSheetVisible}
           onClose={handleCloseBottomSheet}
+          onReadNow={handleReadNow}
         />
       </View>
     );
@@ -460,33 +484,38 @@ export const HomeScreen: React.FC = () => {
 
           {/* Continue Reading / Start Reading — mobile only */}
           {!searchMode && mobile && (
-            <ReadingProgressCard />
+            <ReadingProgressCard
+              onBookPress={handleBookReadingPress}
+              onSeeAllPress={handleSeeAllReading}
+            />
           )}
 
 
           {/* Discover Online - mobile only */}
-          {!searchMode && mobile && discoverOnlineBooks.length > 0 ? (
-            <View className="mb-2">
-              <SectionHeader title="Discover Online" />
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}
-              >
-                {discoverOnlineBooks.slice(0, 15).map((book) => (
-                  <View key={book.key} style={{ width: 140 }}>
-                    <BookCard
-                      book={book}
-                      onPress={() => handleCardPress(book)}
-                      isFavorite={isInWishlist(book.key)}
-                      onFavoritePress={() => handleFavoritePress(book)}
-                    />
-                  </View>
-                ))}
-              </ScrollView>
-            </View>
-          ) : (
-            <SkeletonGrid />
+          {!searchMode && mobile && (
+            discoverOnlineBooks.length > 0 ? (
+              <View className="mb-2">
+                <SectionHeader title="Discover Online" />
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}
+                >
+                  {discoverOnlineBooks.slice(0, 15).map((book) => (
+                    <View key={book.key} style={{ width: 140 }}>
+                      <BookCard
+                        book={book}
+                        onPress={() => handleCardPress(book)}
+                        isFavorite={isInWishlist(book.key)}
+                        onFavoritePress={() => handleFavoritePress(book)}
+                      />
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            ) : (
+              <SkeletonGrid />
+            )
           )}
 
 
@@ -502,6 +531,7 @@ export const HomeScreen: React.FC = () => {
         book={selectedBook}
         visible={bottomSheetVisible}
         onClose={handleCloseBottomSheet}
+        onReadNow={handleReadNow}
       />
     </SafeAreaView>
   );

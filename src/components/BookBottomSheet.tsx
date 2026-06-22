@@ -7,12 +7,13 @@ import {
   Alert,
   Linking,
   Modal,
+  Platform,
   useWindowDimensions,
   ScrollView,
 } from 'react-native';
 import {
   X,
-  Heart,
+  Bookmark,
   BookOpen,
   Globe,
   CheckCircle,
@@ -20,7 +21,6 @@ import {
   Loader,
   ExternalLink,
 } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
@@ -37,6 +37,7 @@ import Animated, {
 import { useWishlist } from '../context/WishlistContext';
 import { useReading } from '../context/ReadingContext';
 import { useDownloads } from '../context/DownloadsContext';
+import { useNotification } from '../context/NotificationContext';
 import { fetchDescription, getCoverUrl, getDownloadFormats } from '../api/openLibrary';
 import { findGutenbergBook, GutenbergBook, GUTENDEX_API } from '../api/gutenberg';
 import { Book, DownloadFormat, DownloadedBook } from '../types';
@@ -49,14 +50,15 @@ interface BookBottomSheetProps {
   book: Book | null;
   visible: boolean;
   onClose: () => void;
+  onReadNow?: () => void;
 }
 
 export const BookBottomSheet: React.FC<BookBottomSheetProps> = ({
   book,
   visible,
   onClose,
+  onReadNow,
 }) => {
-  const router = useRouter();
   const { colorScheme } = useColorScheme();
   const { width } = useWindowDimensions();
   const [loadingMatch, setLoadingMatch] = useState(false);
@@ -74,11 +76,12 @@ export const BookBottomSheet: React.FC<BookBottomSheetProps> = ({
   const [gutendexSubjects, setGutendexSubjects] = useState<string[] | null>(null);
   const gutenbergMatch = localMatch || book?.gutenbergMatch;
 
-  const isPublicDomain = gutenbergMatch !== null;
+  const isPublicDomain = !!gutenbergMatch;
 
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const { addToReading, isInReading } = useReading();
   const { downloadedBooks, addDownload, isDownloaded } = useDownloads();
+  const { showNotification } = useNotification();
   const thisBookDownloaded = book ? isDownloaded(book.key) : false;
 
   const inWishlist = book ? isInWishlist(book.key) : false;
@@ -186,22 +189,23 @@ export const BookBottomSheet: React.FC<BookBottomSheetProps> = ({
     if (!book) return;
     if (inWishlist) {
       await removeFromWishlist(book.key);
+      showNotification({ type: 'info', title: 'Removed', message: 'Book removed from wishlist' });
     } else {
       await addToWishlist(book);
+      showNotification({ type: 'success', title: 'Saved to Wishlist', message: book.title });
     }
-  }, [book, inWishlist, addToWishlist, removeFromWishlist]);
+  }, [book, inWishlist, addToWishlist, removeFromWishlist, showNotification]);
 
   const handleAddToReading = useCallback(() => {
     if (!book || !gutenbergMatch) return;
     addToReading(book, gutenbergMatch.epubUrl);
-  }, [book, gutenbergMatch, addToReading]);
+    showNotification({ type: 'success', title: 'Added to Reading', message: book.title });
+  }, [book, gutenbergMatch, addToReading, showNotification]);
 
   const handleReadNow = useCallback(() => {
     onClose();
-    if (book) {
-      router.push({ pathname: '/reader/[id]', params: { id: book.key } });
-    }
-  }, [onClose, book, router]);
+    onReadNow?.();
+  }, [onClose, onReadNow]);
 
   const downloadWithFetch = async (url: string, destPath: string): Promise<void> => {
     const response = await fetch(url, {
@@ -237,10 +241,9 @@ export const BookBottomSheet: React.FC<BookBottomSheetProps> = ({
     try {
       const bookTitle = book?.title?.replace(/[^a-zA-Z0-9]/g, '_') || 'book';
       const ext = fmt.format === 'EPUB' ? '.epub' :
-        fmt.format === 'PDF' ? '.pdf' :
-          fmt.format === 'Kindle' ? '.mobi' :
-            fmt.format === 'HTML' ? '.html' : '.txt';
+        fmt.format === 'HTML' ? '.html' : '.txt';
       const fileName = `${bookTitle}_${fmt.format}${ext}`;
+
       const destPath = `${FileSystem.documentDirectory}${fileName}`;
 
       await FileSystem.makeDirectoryAsync(FileSystem.documentDirectory!, { intermediates: true });
@@ -264,14 +267,14 @@ export const BookBottomSheet: React.FC<BookBottomSheetProps> = ({
       };
       await addDownload(downloadRecord);
 
-      Alert.alert('Download Complete', `"${fmt.format}" saved.`);
+      showNotification({ type: 'success', title: 'Download Complete', message: `"${fmt.format}" saved.` });
     } catch (err: any) {
       console.error('[Download] Error:', err?.message, err);
-      Alert.alert('Download Error', err?.message || 'Failed to download file');
+      showNotification({ type: 'error', title: 'Download Error', message: err?.message || 'Failed to download file' });
     } finally {
       setDownloadingFormat(null);
     }
-  }, [book]);
+  }, [book, showNotification]);
 
   if (!book) return null;
 
@@ -317,7 +320,7 @@ export const BookBottomSheet: React.FC<BookBottomSheetProps> = ({
             activeOpacity={0.8}
             onPress={handleWishlistToggle}
           >
-            <Heart
+            <Bookmark
               size={16}
               color={inWishlist ? '#FFFFFF' : '#49454F'}
               fill={inWishlist ? '#FFFFFF' : 'none'}
@@ -435,7 +438,7 @@ export const BookBottomSheet: React.FC<BookBottomSheetProps> = ({
         </View>
 
         {/* Download Section */}
-        {(downloadFormats.length > 0 || loadingFormats) && (
+        {Platform.OS !== 'web' && (downloadFormats.length > 0 || loadingFormats) && (
           <View className="mt-6">
             <View className="flex-row items-center mb-3">
               <Download size={18} color="#49454F" />

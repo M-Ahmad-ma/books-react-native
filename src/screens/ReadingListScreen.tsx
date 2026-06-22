@@ -15,6 +15,7 @@ import { BookOpen, ChevronRight, Library, Download, CheckCircle, Trash2 } from '
 import { AppHeader, EmptyState, BookCard, SkeletonGrid } from '../components';
 import { useReading } from '../context/ReadingContext';
 import { useDownloads } from '../context/DownloadsContext';
+import { useNotification } from '../context/NotificationContext';
 import { ReadingBook, Book, DownloadedBook } from '../types';
 import { getCoverUrl } from '../api/openLibrary';
 import { BookBottomSheet } from '../components/BookBottomSheet';
@@ -25,6 +26,7 @@ export const ReadingListScreen: React.FC = () => {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { readingBooks, removeFromReading, isLoading } = useReading();
+  const { showNotification } = useNotification();
   const { downloadedBooks } = useDownloads();
   const [selectedBook, _setSelectedBook] = useState<Book | null>(null);
   const [bottomSheetVisible, setBottomSheetVisible] = useState(false);
@@ -43,7 +45,7 @@ export const ReadingListScreen: React.FC = () => {
         params: { id: item.id, localFile: item.filePath, format: item.format },
       });
     } else {
-      Alert.alert('Open File', `Open "${item.filePath}" with an external reader.`);
+      showNotification({ type: 'info', title: 'Open File', message: `Opening in external reader...` });
     }
   };
 
@@ -51,7 +53,7 @@ export const ReadingListScreen: React.FC = () => {
     try {
       console.log('[ReadingList] Removing book:', book.id);
       await removeFromReading(book.id);
-      console.log('[ReadingList] Book removed successfully:', book.id);
+      showNotification({ type: 'info', title: 'Removed', message: 'Book removed from reading list' });
     } catch (error) {
       console.error('[ReadingList] Error removing book:', error);
     }

@@ -11,3 +11,4 @@ export { FeaturedSection } from './FeaturedSection';
 export { Skeleton, SkeletonReaderHeader, SkeletonReaderContent, SkeletonBookCard, SkeletonGrid } from './Skeleton';
 export { ReadingProgressCard } from './ReadingProgressCard';
 export { DesktopSidebar } from './DesktopSidebar';
+export { NotificationToast } from './NotificationToast';

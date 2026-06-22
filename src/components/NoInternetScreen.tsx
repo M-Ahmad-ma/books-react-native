@@ -1,10 +1,13 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import { WifiOff, Library } from 'lucide-react-native';
 
 export const NoInternetScreen: React.FC = () => {
-  const navigation = useNavigation<any>();
+  const handleGoToLibrary = () => {
+    if (Platform.OS === 'web') {
+      window.location.href = '/reading-list';
+    }
+  };
 
   return (
     <View className="flex-1 bg-md-background-light dark:bg-md-background-dark items-center justify-center px-8">
@@ -21,7 +24,7 @@ export const NoInternetScreen: React.FC = () => {
       </Text>
 
       <TouchableOpacity
-        onPress={() => navigation.navigate('Reading')}
+        onPress={handleGoToLibrary}
         className="mt-8 flex-row items-center px-6 py-4 bg-md-primary-light dark:bg-md-primary-dark rounded-[20px]"
       >
         <Library size={20} color="#FFFFFF" />

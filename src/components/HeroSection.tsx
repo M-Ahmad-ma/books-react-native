@@ -15,9 +15,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ coverUrl, onPress }) =
   if (desktop) {
     // console.log('desktop')
     return (
-      <TouchableOpacity
-        onPress={onPress}
-        activeOpacity={0.9}
+      <View
         className="mx-5 my-4 rounded-2xl overflow-hidden"
         style={{
           elevation: 5,
@@ -66,7 +64,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ coverUrl, onPress }) =
             Curated titles handpicked for curious minds.
           </Text>
         </View>
-      </TouchableOpacity>);
+      </View>);
   }
 
   return (

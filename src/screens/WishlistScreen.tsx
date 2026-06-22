@@ -3,6 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, Image, ScrollView, useWindowDim
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Heart, Trash2, BookOpen, Bookmark } from 'lucide-react-native';
 import { useWishlist } from '../context/WishlistContext';
+import { useNotification } from '../context/NotificationContext';
 import { Book, GutenbergBook, WishlistItem } from '../types';
 import { getCoverUrl } from '../api/openLibrary';
 import { BookCard } from '../components/BookCard';
@@ -13,6 +14,7 @@ import { AppHeader, EmptyState } from '@/components';
 
 export const WishlistScreen: React.FC = () => {
   const { wishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  const { showNotification } = useNotification();
 
   console.log(wishlist, "[17 in wishlist] wishlist")
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
@@ -53,7 +55,8 @@ export const WishlistScreen: React.FC = () => {
 
   const handleRemove = useCallback((key: string) => {
     removeFromWishlist(key);
-  }, [removeFromWishlist]);
+    showNotification({ type: 'info', title: 'Removed', message: 'Book removed from wishlist' });
+  }, [removeFromWishlist, showNotification]);
 
   const createBookFromItem = useCallback((item: WishlistItem): Book => {
     let gutenbergMatch: GutenbergBook | null = null;
@@ -88,7 +91,8 @@ export const WishlistScreen: React.FC = () => {
 
   const handleFavoritePress = useCallback((book: Book) => {
     removeFromWishlist(book.key);
-  }, [removeFromWishlist]);
+    showNotification({ type: 'info', title: 'Removed', message: 'Book removed from wishlist' });
+  }, [removeFromWishlist, showNotification]);
 
   console.log(selectedBook, "selectedBook [91 in wishlist]")
 
@@ -207,7 +211,7 @@ export const WishlistScreen: React.FC = () => {
         </View>
 
         <TouchableOpacity
-          onPress={() => removeFromWishlist(item.key)}
+          onPress={() => handleRemove(item.key)}
           className="w-10 h-10 absolute top-3 right-2 rounded-full items-center justify-center bg-md-errorContainer-light dark:bg-md-errorContainer-dark"
         >
           <Trash2 size={18} className='dark:text-md-errorContainer-light' />

@@ -13,7 +13,6 @@ import {
 
 } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import { useRouter } from 'expo-router';
 import { useReading } from '../context/ReadingContext';
 import { getCoverUrl } from '../api/openLibrary';
 
@@ -30,12 +29,14 @@ const getTimeAgo = (timestamp: number): string => {
   return `${Math.floor(days / 7)}w ago`;
 };
 
-interface ReadingProgressCardProps { }
+interface ReadingProgressCardProps {
+  onBookPress?: (book: any) => void;
+  onSeeAllPress?: () => void;
+}
 
-export const ReadingProgressCard: React.FC<ReadingProgressCardProps> = () => {
+export const ReadingProgressCard: React.FC<ReadingProgressCardProps> = ({ onBookPress, onSeeAllPress }) => {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const router = useRouter();
   const { readingBooks } = useReading();
 
   const hasAnyBooks = readingBooks.length > 0;
@@ -63,18 +64,12 @@ export const ReadingProgressCard: React.FC<ReadingProgressCardProps> = () => {
       <View className="mb-5">
         <View className="flex-row items-center justify-between px-5 mb-3">
           <View className="flex-row items-center gap-2">
-            {/* <View */}
-            {/*   className="w-8 h-8 rounded-full items-center justify-center" */}
-            {/*   style={{ backgroundColor: accentColor + '20' }} */}
-            {/* > */}
-            {/*   <BookOpen size={16} color={accentColor} /> */}
-            {/* </View> */}
-            <Text className="text-md-title-medium text-md-onSurface-light dark:text-md-onSurface-dark font-normal">
+            <Text className="text-md-title-medium text-md-onSurface-light dark:text-md-onSurface-dark font-semibold">
               Continue Reading
             </Text>
           </View>
           <TouchableOpacity
-            onPress={() => router.push('/reading-list')}
+            onPress={() => onSeeAllPress?.()}
             className="flex-row items-center"
             activeOpacity={0.7}
           >
@@ -106,12 +101,7 @@ export const ReadingProgressCard: React.FC<ReadingProgressCardProps> = () => {
               <TouchableOpacity
                 key={book.id}
                 activeOpacity={0.85}
-                onPress={() =>
-                  router.push({
-                    pathname: '/reader/[id]',
-                    params: { id: book.id },
-                  })
-                }
+                onPress={() => onBookPress?.(book)}
                 style={{
                   width: 188,
                   backgroundColor: cardBg,

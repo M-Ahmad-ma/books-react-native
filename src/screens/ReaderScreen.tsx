@@ -772,6 +772,7 @@ export const ReaderScreen: React.FC = () => {
               allowsInlineMediaPlayback
               javaScriptEnabled={true}
               domStorageEnabled={true}
+              allowFileAccess={true}
               startInLoadingState={false}
               onLoadStart={handleWebViewLoadStart}
               onLoadEnd={handleWebViewLoadEnd}

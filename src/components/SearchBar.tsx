@@ -21,7 +21,7 @@ export const SearchBar: React.FC<SearchInputProps> = ({
 
   return (
     <View
-      className="flex-row items-center rounded-[16px] px-4 py-3 border"
+      className="flex-row items-center rounded-[16px] px-4 py-1 border"
       style={{
         backgroundColor: isDark
           ? 'rgba(255, 255, 255, 0.08)'

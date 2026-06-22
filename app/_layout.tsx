@@ -16,6 +16,7 @@ import { ReaderPreferencesProvider } from '../src/context/ReaderPreferencesConte
 import { ThemeProvider } from '../src/components/ThemeProvider';
 import { SplashScreen } from '../src/components/SplashScreen';
 import { SplashProvider } from '../src/context/SplashContext';
+import { NotificationProvider } from '../src/context/NotificationContext';
 import '../global.css';
 
 const queryClient = new QueryClient({
@@ -97,12 +98,8 @@ function AppContent() {
   const [splashDone, setSplashDone] = useState(Platform.OS === 'web');
   const { isConnected } = useConnectivity();
 
-  if (!isConnected) {
-    return <NoInternetScreen />;
-  }
-
   return (
-    <View className="font-display-medium flex-1 bg-md-background-light dark:bg-md-background-dark">
+    <View className="flex-1 bg-md-background-light dark:bg-md-background-dark">
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
@@ -111,6 +108,11 @@ function AppContent() {
         />
       </Stack>
       <StatusBar style="auto" />
+      {!isConnected && (
+        <View className="absolute inset-0 z-50">
+          <NoInternetScreen />
+        </View>
+      )}
       {!splashDone && (
         <SplashScreen onFinish={() => setSplashDone(true)} />
       )}
@@ -132,7 +134,9 @@ export default function RootLayout() {
                       <DownloadsProvider>
                         <ReaderPreferencesProvider>
                           <SplashProvider>
-                            <AppContent />
+                            <NotificationProvider>
+                              <AppContent />
+                            </NotificationProvider>
                           </SplashProvider>
                         </ReaderPreferencesProvider>
                       </DownloadsProvider>
