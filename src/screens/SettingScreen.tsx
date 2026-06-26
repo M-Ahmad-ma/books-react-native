@@ -156,7 +156,7 @@ export default function AboutScreen() {
           contentContainerClassName="pb-16"
           showsVerticalScrollIndicator={false}
         >
-          <View className="max-w-xl mx-auto w-full">
+          <View className="max-w-3xl mx-auto w-full">
             {content}
           </View>
         </ScrollView>

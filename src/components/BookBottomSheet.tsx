@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -34,6 +34,7 @@ import Animated, {
   runOnJS,
   Easing,
 } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWishlist } from '../context/WishlistContext';
 import { useReading } from '../context/ReadingContext';
 import { useDownloads } from '../context/DownloadsContext';
@@ -89,6 +90,7 @@ export const BookBottomSheet: React.FC<BookBottomSheetProps> = ({
   const tablet = isTablet(width);
   const desktop = isDesktop(width);
 
+  const insets = useSafeAreaInsets();
   const isDark = colorScheme === 'dark';
   const surfaceColor = isDark ? '#1C1B1F' : '#FFFBFE';
   const scrimColor = 'rgba(0, 0, 0, 0.4)';
@@ -275,6 +277,8 @@ export const BookBottomSheet: React.FC<BookBottomSheetProps> = ({
       setDownloadingFormat(null);
     }
   }, [book, showNotification]);
+
+  const snapPoints = useMemo(() => ['80%'], []);
 
   if (!book) return null;
 
@@ -591,8 +595,9 @@ export const BookBottomSheet: React.FC<BookBottomSheetProps> = ({
           >
             {/* Drawer Header */}
             <View
-              className="flex-row items-center justify-between px-6 pt-6 pb-3"
+              className="flex-row items-center justify-between px-6 pb-3"
               style={{
+                paddingTop: insets.top + 16,
                 backgroundColor: surfaceColor,
                 borderBottomWidth: 1,
                 borderBottomColor: isDark ? '#2E2A30' : '#E7E0EC',
@@ -613,6 +618,7 @@ export const BookBottomSheet: React.FC<BookBottomSheetProps> = ({
             <ScrollView
               showsVerticalScrollIndicator={false}
               style={{ flex: 1 }}
+              contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
             >
               <BookContent />
             </ScrollView>
@@ -627,7 +633,7 @@ export const BookBottomSheet: React.FC<BookBottomSheetProps> = ({
     <BottomSheetModal
       key={book.key}
       ref={bottomSheetRef}
-      enableDynamicSizing
+      snapPoints={snapPoints}
       backdropComponent={renderBackdrop}
       onDismiss={handleDismiss}
       handleComponent={renderHandle}

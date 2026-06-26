@@ -72,27 +72,29 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({
     >
       <View style={{ flex: 1 }}>
         {children}
-        <View
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            pointerEvents: 'box-none',
-            zIndex: 9999,
-          }}
-        >
-          {notifications.map((n, i) => (
-            <NotificationToast
-              key={n.id}
-              notification={n}
-              onRemove={dismissNotification}
-              index={i}
-              isDesktop={desktop}
-            />
-          ))}
-        </View>
+        {notifications.length > 0 && (
+          <View
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              pointerEvents: 'box-none',
+              zIndex: 99999,
+            }}
+          >
+            {notifications.map((n, i) => (
+              <NotificationToast
+                key={n.id}
+                notification={n}
+                onRemove={dismissNotification}
+                index={i}
+                isDesktop={desktop}
+              />
+            ))}
+          </View>
+        )}
       </View>
     </NotificationContext.Provider>
   );

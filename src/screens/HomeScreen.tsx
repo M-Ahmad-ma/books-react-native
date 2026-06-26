@@ -269,7 +269,7 @@ export const HomeScreen: React.FC = () => {
   };
 
   const filterChips = (
-    <View className="pb-3 mt-3">
+    <View className="pb-3">
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -318,11 +318,10 @@ export const HomeScreen: React.FC = () => {
             setSearchMode(false);
             setSearchQuery('');
           }}
-          className={`flex-row items-center px-3 py-1.5 rounded-full ${
-            showPublicDomainOnly
-              ? 'bg-md-primaryContainer-light dark:bg-md-primaryContainer-dark'
-              : 'bg-md-surfaceVariant-light dark:bg-md-surfaceVariant-dark'
-          }`}
+          className={`flex-row items-center px-3 py-1.5 rounded-full ${showPublicDomainOnly
+            ? 'bg-md-primaryContainer-light dark:bg-md-primaryContainer-dark'
+            : 'bg-md-surfaceVariant-light dark:bg-md-surfaceVariant-dark'
+            }`}
           activeOpacity={0.7}
         >
           <Filter
@@ -332,11 +331,10 @@ export const HomeScreen: React.FC = () => {
               : (isDark ? '#CAC4D0' : '#49454F')
             }
           />
-          <Text className={`text-md-label-medium ml-1.5 ${
-            showPublicDomainOnly
-              ? 'text-md-onPrimaryContainer-light dark:text-md-onPrimaryContainer-dark'
-              : 'text-md-onSurfaceVariant-light dark:text-md-onSurfaceVariant-dark'
-          }`}>
+          <Text className={`text-md-label-medium ml-1.5 ${showPublicDomainOnly
+            ? 'text-md-onPrimaryContainer-light dark:text-md-onPrimaryContainer-dark'
+            : 'text-md-onSurfaceVariant-light dark:text-md-onSurfaceVariant-dark'
+            }`}>
             {showPublicDomainOnly ? 'Gutenberg' : 'OpenLibrary'}
           </Text>
         </TouchableOpacity>
@@ -494,7 +492,7 @@ export const HomeScreen: React.FC = () => {
           {/* Discover Online - mobile only */}
           {!searchMode && mobile && (
             discoverOnlineBooks.length > 0 ? (
-              <View className="mb-2">
+              <View>
                 <SectionHeader title="Discover Online" />
                 <ScrollView
                   horizontal
