@@ -367,7 +367,7 @@ export const ReaderScreen: React.FC = () => {
       if (loading) {
         setLoadTimedOut(true);
       }
-    }, 20000);
+    }, 45000);
     return () => clearTimeout(timer);
   }, [webViewKey, loading]);
 

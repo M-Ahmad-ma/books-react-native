@@ -12,13 +12,19 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.books.expo"
+      "bundleIdentifier": "com.books.expo",
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
+      }
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#1C1B1F"
       },
-      "package": "com.books.expo"
+      "package": "com.books.expo",
+      "usesCleartextTraffic": true
     },
     "web": {
       "favicon": "./assets/favicon.png"

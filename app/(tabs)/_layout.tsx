@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, TouchableOpacity, useWindowDimensions } from 'react-native';
-import { Tabs, useRouter } from 'expo-router';
-import { Search, Heart, Library, Info, Sun, Moon, Bookmark } from 'lucide-react-native';
+import { Tabs } from 'expo-router';
+import { Search, Library, Info, Sun, Moon, Bookmark, User } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import { isDesktop } from '@/utils';
 import { DesktopSidebar } from '../../src/components/DesktopSidebar';
@@ -85,6 +85,12 @@ function DesktopTabLayout() {
               title: 'About',
             }}
           />
+          <Tabs.Screen
+            name="profile"
+            options={{
+              title: 'Profile',
+            }}
+          />
         </Tabs>
       </View>
     </View>
@@ -160,6 +166,16 @@ export default function TabLayout() {
           tabBarLabel: 'About',
           tabBarIcon: ({ focused }) => (
             <TabIcon icon={Info} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarLabel: 'Profile',
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon={User} focused={focused} />
           ),
         }}
       />

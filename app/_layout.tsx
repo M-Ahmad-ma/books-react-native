@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { AuthScreen } from '../src/screens/AuthScreen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
@@ -17,6 +18,7 @@ import { ThemeProvider } from '../src/components/ThemeProvider';
 import { SplashScreen } from '../src/components/SplashScreen';
 import { SplashProvider } from '../src/context/SplashContext';
 import { NotificationProvider } from '../src/context/NotificationContext';
+import { AuthProvider, useAuth } from '../src/context/AuthContext';
 import '../global.css';
 
 const queryClient = new QueryClient({
@@ -92,11 +94,38 @@ const initDatabaseTables = async (db: SQLiteDatabase) => {
       ['light', 'georgia', 18, 1.8]
     );
   }
+
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS auth_session (
+      id INTEGER PRIMARY KEY DEFAULT 1,
+      access_token TEXT NOT NULL,
+      refresh_token TEXT NOT NULL,
+      user_json TEXT NOT NULL
+    )
+  `);
 };
 
 function AppContent() {
   const [splashDone, setSplashDone] = useState(Platform.OS === 'web');
   const { isConnected } = useConnectivity();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (!splashDone) {
+    return (
+      <View className="flex-1 bg-md-background-light dark:bg-md-background-dark">
+        <StatusBar style="auto" />
+        <SplashScreen onFinish={() => setSplashDone(true)} />
+      </View>
+    );
+  }
+
+  if (isLoading) {
+    return <View className="flex-1 bg-md-background-light dark:bg-md-background-dark" />;
+  }
+
+  if (!isAuthenticated) {
+    return <AuthScreen />;
+  }
 
   return (
     <View className="flex-1 bg-md-background-light dark:bg-md-background-dark">
@@ -112,9 +141,6 @@ function AppContent() {
         <View className="absolute inset-0 z-50">
           <NoInternetScreen />
         </View>
-      )}
-      {!splashDone && (
-        <SplashScreen onFinish={() => setSplashDone(true)} />
       )}
     </View>
   );
@@ -132,13 +158,15 @@ export default function RootLayout() {
                   <WishlistProvider>
                     <ReadingProvider>
                       <DownloadsProvider>
-                        <ReaderPreferencesProvider>
-                          <SplashProvider>
-                            <NotificationProvider>
-                              <AppContent />
-                            </NotificationProvider>
-                          </SplashProvider>
-                        </ReaderPreferencesProvider>
+                    <ReaderPreferencesProvider>
+                      <SplashProvider>
+                        <NotificationProvider>
+                          <AuthProvider>
+                            <AppContent />
+                          </AuthProvider>
+                        </NotificationProvider>
+                      </SplashProvider>
+                    </ReaderPreferencesProvider>
                       </DownloadsProvider>
                     </ReadingProvider>
                   </WishlistProvider>

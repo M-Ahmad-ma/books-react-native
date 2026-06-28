@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
-import { Search, Bookmark, Library, Info, BookOpen } from 'lucide-react-native';
+import { Search, Bookmark, Library, Info, BookOpen, User } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import { ThemeToggleButton } from '../navigation/AppNavigator';
 
@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { label: 'Discover', icon: Search, route: '/' },
   { label: 'Wishlist', icon: Bookmark, route: '/wishlist' },
   { label: 'Library', icon: Library, route: '/reading-list' },
+  { label: 'Profile', icon: User, route: '/profile' },
   { label: 'About', icon: Info, route: '/about' },
 ];
 

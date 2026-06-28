@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { SearchBar } from '../components/SearchBar';
 import { BookCard } from '../components/BookCard';
-import { SkeletonGrid } from '../components/Skeleton';
+import { SkeletonGrid, SkeletonHorizontal } from '../components/Skeleton';
 import { BookBottomSheet } from '../components/BookBottomSheet';
 import {
   searchBooks,
@@ -29,6 +29,7 @@ import { getGutenbergPublicDomainBooks, searchGutenbergBooks, GutenbergBook } fr
 import { Book } from '../types';
 import { ThemeToggleButton } from '../navigation/AppNavigator';
 import { useWishlist } from '../context/WishlistContext';
+import { useNotification } from '../context/NotificationContext';
 import { AppHeader, EmptyState, FeaturedSection, ReadingProgressCard, SectionHeader, HeroSection, FilterChip } from '../components';
 import { isDesktop, isMobile, isTablet } from '@/utils';
 
@@ -65,6 +66,7 @@ const mapGutenbergToBook = (gb: GutenbergBook): Book =>
 
 export const HomeScreen: React.FC = () => {
   const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
+  const { showNotification } = useNotification();
   const { width } = useWindowDimensions()
   const router = useRouter();
 
@@ -223,11 +225,13 @@ export const HomeScreen: React.FC = () => {
     (book: Book) => {
       if (isInWishlist(book.key)) {
         removeFromWishlist(book.key);
+        showNotification({ type: 'info', title: 'Removed', message: 'Book removed from wishlist' });
       } else {
         addToWishlist(book);
+        showNotification({ type: 'success', title: 'Added', message: 'Book added to wishlist' });
       }
     },
-    [isInWishlist, addToWishlist, removeFromWishlist],
+    [isInWishlist, addToWishlist, removeFromWishlist, showNotification],
   );
 
 
@@ -491,9 +495,9 @@ export const HomeScreen: React.FC = () => {
 
           {/* Discover Online - mobile only */}
           {!searchMode && mobile && (
-            discoverOnlineBooks.length > 0 ? (
-              <View>
-                <SectionHeader title="Discover Online" />
+            <View>
+              <SectionHeader title="Discover Online" />
+              {discoverOnlineBooks.length > 0 ? (
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -510,10 +514,12 @@ export const HomeScreen: React.FC = () => {
                     </View>
                   ))}
                 </ScrollView>
-              </View>
-            ) : (
-              <SkeletonGrid />
-            )
+              ) : (
+                <View className="pb-4">
+                  <SkeletonHorizontal />
+                </View>
+              )}
+            </View>
           )}
 
 

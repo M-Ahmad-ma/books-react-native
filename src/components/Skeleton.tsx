@@ -77,3 +77,17 @@ export const SkeletonGrid: React.FC = () => (
     ))}
   </View>
 );
+
+export const SkeletonHorizontal: React.FC = () => (
+  <View className="flex-row px-5 gap-3">
+    {Array.from({ length: 4 }).map((_, i) => (
+      <View key={i} style={{ width: 140 }}>
+        <Skeleton height={200} borderRadius={12} />
+        <View className="mt-2 gap-1.5">
+          <Skeleton width={120} height={14} borderRadius={4} />
+          <Skeleton width={80} height={12} borderRadius={4} />
+        </View>
+      </View>
+    ))}
+  </View>
+);
