@@ -13,7 +13,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ coverUrl, onPress }) =
 
 
   if (desktop) {
-    // console.log('desktop')
     return (
       <View
         className="mx-5 my-4 rounded-2xl overflow-hidden"

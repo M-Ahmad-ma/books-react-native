@@ -7,10 +7,7 @@ import type {
   ProfileUpdatePayload,
 } from '../types/auth';
 
-const YOUR_MACHINE_IP = '192.168.100.138';
-const API_BASE = Platform.OS === 'android'
-  ? `http://${YOUR_MACHINE_IP}:3000/api`
-  : `http://${YOUR_MACHINE_IP}:3000/api`;
+const API_BASE = "https://books-auth-api-production.up.railway.app/api"
 
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {

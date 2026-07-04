@@ -37,9 +37,7 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({
       try {
         const items = await getWishlist();
         setWishlist(items);
-        console.log('[WishlistContext] Loaded', items.length, 'items from DB');
       } catch (error) {
-        console.error('[WishlistContext] Error initializing:', error);
       }
     };
     init();
@@ -69,7 +67,6 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({
         return [newItem, ...prev];
       });
     } catch (error) {
-      console.error('[WishlistContext] Error adding to wishlist:', error);
     }
   }, []);
 
@@ -78,7 +75,6 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({
       await removeFromWishlistDB(key);
       setWishlist(prev => prev.filter(item => item.key !== key));
     } catch (error) {
-      console.error('[WishlistContext] Error removing from wishlist:', error);
     }
   }, []);
 

@@ -7,14 +7,6 @@ const GUTENBERG_BASE = 'https://www.gutenberg.org';
 const GUTENBERG_API = `${GUTENBERG_BASE}/ebooks`;
 const GUTENDEX_API = 'https://gutendex.com/books';
 
-const log = (tag: string, message: string, data?: any) => {
-  if (data) {
-    console.log(`[${tag}] ${message}:`, data);
-  } else {
-    console.log(`[${tag}] ${message}`);
-  }
-};
-
 export const getCoverUrl = (
   coverId: number,
   size: 'S' | 'M' | 'L' = 'M',
@@ -124,10 +116,6 @@ export const isPublicDomainBook = (book: Book): boolean => {
 
 export const filterPublicDomainBooks = (books: Book[]): Book[] => {
   const results = books.filter(book => isPublicDomainBook(book));
-  log(
-    'OpenLibrary',
-    `Filter: ${books.length} → ${results.length} (public domain)`,
-  );
   return results;
 };
 
@@ -164,12 +152,6 @@ export const searchBooks = async (
       : '';
     const url = `${SEARCH_URL}?q=${encodedQuery}&limit=${limit}&offset=${offset}${subjectParam}&fields=key,title,author_name,author_key,first_publish_year,cover_i,cover_edition_key,subject,edition_count,rating_average,olid,public_scan_b,has_fulltext,ebook_access`;
 
-    log(
-      'OpenLibrary',
-      `SEARCH: "${query}" (limit: ${limit}, offset: ${offset})`,
-      url,
-    );
-
     const response = await fetch(url);
 
     if (!response.ok) {
@@ -178,14 +160,8 @@ export const searchBooks = async (
 
     const data = await response.json();
 
-    log(
-      'OpenLibrary',
-      `Results: ${data.numFound} total (returned ${data.docs?.length || 0})`,
-    );
-
     return data as SearchResponse;
   } catch (error) {
-    console.error('[OpenLibrary] Search error:', error);
     throw error;
   }
 };
@@ -193,7 +169,6 @@ export const searchBooks = async (
 export const getBookDetails = async (workId: string): Promise<Book> => {
   try {
     const url = `${BASE_URL}/works/${workId}.json`;
-    log('OpenLibrary', `DETAILS: ${workId}`, url);
     const response = await fetch(url);
 
     if (!response.ok) {
@@ -201,10 +176,8 @@ export const getBookDetails = async (workId: string): Promise<Book> => {
     }
 
     const data = await response.json();
-    log("DATA", data)
     return data;
   } catch (error) {
-    console.error('[OpenLibrary] Details error:', error);
     throw error;
   }
 };
@@ -244,12 +217,10 @@ export const getTrendingBooks = async (
     if (!subject || subject === 'all') {
       // Use search API with trending sort - the /trending endpoint is broken
       url = `${SEARCH_URL}?q=*:*&sort=trending&limit=${limit}&offset=${offset}&fields=key,title,author_name,first_publish_year,cover_i,subject,edition_count,ebook_access,public_scan_b,series_key`;
-      log('OpenLibrary', `TRENDING (global, limit: ${limit})`, url);
     } else {
       // Filtered – use search with subject, sorted by trending
       const mappedSubject = OL_SUBJECT_MAP[subject] || subject.replace(/_/g, ' ');
       url = `${SEARCH_URL}?q=subject:${encodeURIComponent(mappedSubject)}&limit=${limit}&offset=${offset}&sort=trending&fields=key,title,author_name,first_publish_year,cover_i,subject,edition_count,ebook_access`;
-      log('OpenLibrary', `TRENDING (subject: ${mappedSubject})`, url);
     }
 
     const response = await fetch(url);
@@ -264,16 +235,8 @@ export const getTrendingBooks = async (
     const readable = books.filter((b: Book) => isPublicDomainBook(b));
     const notReadable = books.length - readable.length;
 
-    log(
-      'OpenLibrary',
-      `Trending: ${books.length} total | Readable (Public Domain): ${readable.length} | Premium: ${notReadable}`,
-    );
-
-    console.log("Books on line 271 openlibrary.ts", books, "data", data)
-
     return books;
   } catch (error) {
-    console.error('[OpenLibrary] Trending error:', error);
     throw error;
   }
 };
@@ -292,7 +255,6 @@ export const getBookCoverUrl = (
 export const getBookEditions = async (workKey: string): Promise<any[]> => {
   try {
     const url = `${BASE_URL}${workKey}/editions.json?limit=5`;
-    log('OpenLibrary', `FETCHING EDITIONS: ${workKey}`, url);
     const res = await fetch(url);
     if (!res.ok) return [];
     const data = await res.json();
@@ -314,7 +276,6 @@ const tryHead = async (url: string): Promise<boolean> => {
 const resolveUrl = async (url: string): Promise<string> => {
   try {
     const res = await fetch(url, { method: 'HEAD' });
-    log('OpenLibrary', `Resolved ${url} → ${res.url}`);
     return res.url || url;
   } catch {
     return url;
@@ -343,12 +304,10 @@ export const getDownloadFormats = async (book: Book): Promise<DownloadFormat[]> 
 
   // 1. Gutenberg — use Gutendex for real URLs
   if (gId) {
-    log('OpenLibrary', `Fetching Gutendex formats for Gutenberg ID: ${gId}`);
     try {
       const gRes = await fetch(`${GUTENDEX_API}/${gId}`);
       if (gRes.ok) {
         const gData = await gRes.json();
-        log('OpenLibrary', `Gutendex formats available:`, Object.keys(gData.formats || {}));
         for (const [mime, rawUrl] of Object.entries(gData.formats || {})) {
           const fmt = GUTENBERG_DOWNLOAD_FORMATS[mime];
           if (fmt && typeof rawUrl === 'string') {
@@ -357,10 +316,8 @@ export const getDownloadFormats = async (book: Book): Promise<DownloadFormat[]> 
           }
         }
       } else {
-        log('OpenLibrary', `Gutendex returned ${gRes.status}, falling back to constructed URLs`);
       }
     } catch (e) {
-      log('OpenLibrary', `Gutendex fetch failed, falling back to constructed URLs:`, e);
     }
 
     // Fallback / extra formats not in Gutendex
@@ -389,7 +346,6 @@ export const getDownloadFormats = async (book: Book): Promise<DownloadFormat[]> 
       const editions = await getBookEditions(book.key);
       for (const ed of editions) {
         if (ed.ocaid) {
-          log('OpenLibrary', `Found Internet Archive edition: ${ed.ocaid}`);
           const base = `https://archive.org/download/${ed.ocaid}/${ed.ocaid}`;
           const epubUrl = `${base}.epub`;
           const pdfUrl = `${base}.pdf`;
@@ -402,7 +358,6 @@ export const getDownloadFormats = async (book: Book): Promise<DownloadFormat[]> 
     } catch {}
   }
 
-  log('OpenLibrary', `Final download formats for "${book.title}":`, formats);
   return formats;
 };
 
@@ -410,17 +365,14 @@ export async function fetchDescription(key: string) {
   try {
     const res = await fetch(`${BASE_URL}${key}.json`)
     if (!res.ok) {
-      console.log(`[OpenLibrary] fetchDescription failed: ${res.status} for ${key}`)
       return null
     }
     const data = await res.json()
     if (data?.error) {
-      console.log(`[OpenLibrary] fetchDescription error: ${data.error} for ${key}`)
       return null
     }
     return data?.description?.value ?? data?.description ?? null
   } catch (e) {
-    console.log(`[OpenLibrary] fetchDescription error for ${key}:`, e)
     return null
   }
 }

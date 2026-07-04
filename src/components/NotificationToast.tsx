@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
   Info,
 } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import Animated, {
+import Reanimated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
@@ -55,6 +55,137 @@ interface NotificationToastProps {
   isDesktop: boolean;
 }
 
+function ToastInner({
+  notification,
+  accentColor,
+  isDark,
+  onDismiss,
+}: {
+  notification: NotificationData;
+  accentColor: string;
+  isDark: boolean;
+  onDismiss: () => void;
+}) {
+  const config = TYPE_CONFIG[notification.type];
+  const IconComponent = config.icon;
+
+  return (
+    <>
+      <View
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: 4,
+          backgroundColor: accentColor,
+          borderTopLeftRadius: 16,
+          borderBottomLeftRadius: 16,
+        }}
+      />
+      <View className="pl-[18] pr-3 py-3.5">
+        <View className="flex-row items-start justify-between">
+          <View className="flex-row items-start flex-1 mr-2" style={{ gap: 10 }}>
+            <IconComponent size={18} color={accentColor} style={{ marginTop: 1 }} />
+            <View className="flex-1" style={{ gap: 2 }}>
+              <Text className="text-sm font-semibold text-md-onSurface-light dark:text-md-onSurface-dark leading-5">
+                {notification.title}
+              </Text>
+              {notification.message && (
+                <Text className="text-[13px] text-md-onSurfaceVariant-light dark:text-md-onSurfaceVariant-dark leading-[18px]">
+                  {notification.message}
+                </Text>
+              )}
+              {notification.action && (
+                <TouchableOpacity
+                  onPress={() => {
+                    notification.action?.onPress();
+                    onDismiss();
+                  }}
+                  className="mt-1.5"
+                  hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                >
+                  <Text style={{ color: accentColor }} className="text-xs font-bold">
+                    {notification.action.label}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+          <TouchableOpacity
+            onPress={onDismiss}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            className="p-1 -m-1"
+          >
+            <X size={14} color={isDark ? '#CAC4D0' : '#49454F'} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </>
+  );
+}
+
+function WebNotificationToast({
+  notification,
+  onRemove,
+  index,
+  isDesktop,
+}: NotificationToastProps) {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const insets = useSafeAreaInsets();
+  const [visible, setVisible] = useState(false);
+  const dismissingRef = useRef(false);
+
+  const config = TYPE_CONFIG[notification.type];
+  const accentColor = isDark ? config.dark : config.light;
+
+  useEffect(() => {
+    requestAnimationFrame(() => setVisible(true));
+  }, []);
+
+  const handleDismiss = useCallback(() => {
+    if (dismissingRef.current) return;
+    dismissingRef.current = true;
+    onRemove(notification.id);
+  }, [notification.id, onRemove]);
+
+  useEffect(() => {
+    const dur = notification.duration ?? 4000;
+    if (dur <= 0) return;
+    const timer = setTimeout(() => handleDismiss(), dur);
+    return () => clearTimeout(timer);
+  }, [notification.duration, handleDismiss]);
+
+  const containerStyle = {
+    position: 'absolute' as const,
+    top: insets.top + 8 + index * 84,
+    left: isDesktop ? undefined : 16,
+    right: 16,
+    width: isDesktop ? 384 : undefined,
+    alignSelf: isDesktop ? ('flex-end' as const) : undefined,
+    zIndex: 9999 - index,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: isDark ? 0.45 : 0.1,
+    shadowRadius: 16,
+  };
+
+  return (
+    <View
+      style={[containerStyle, { opacity: visible ? 1 : 0, transition: 'opacity 250ms ease-in-out' }]}
+      className="bg-md-surfaceContainer-high-light dark:bg-md-surfaceContainer-high-dark rounded-2xl overflow-hidden"
+    >
+      <ToastInner
+        notification={notification}
+        accentColor={accentColor}
+        isDark={isDark}
+        onDismiss={handleDismiss}
+      />
+    </View>
+  );
+}
+
 export const NotificationToast: React.FC<NotificationToastProps> = ({
   notification,
   onRemove,
@@ -65,7 +196,18 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
   const isDark = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
 
-  const translateY = useSharedValue(-120);
+  if (Platform.OS === 'web') {
+    return (
+      <WebNotificationToast
+        notification={notification}
+        onRemove={onRemove}
+        index={index}
+        isDesktop={isDesktop}
+      />
+    );
+  }
+
+  const translateY = useSharedValue(100);
   const opacity = useSharedValue(0);
   const scale = useSharedValue(0.9);
   const translateX = useSharedValue(0);
@@ -73,7 +215,6 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
   const dismissing = useRef(false);
 
   const config = TYPE_CONFIG[notification.type];
-  const IconComponent = config.icon;
   const accentColor = isDark ? config.dark : config.light;
 
   const handleDismiss = useCallback(() => {
@@ -141,87 +282,32 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
 
   const containerStyle = {
     position: 'absolute' as const,
-    top: insets.top + 8 + index * 84,
+    bottom: insets.top + 2 + index * 70,
     left: isDesktop ? undefined : 16,
     right: 16,
     width: isDesktop ? 384 : undefined,
     alignSelf: isDesktop ? ('flex-end' as const) : undefined,
     zIndex: 9999 - index,
-    elevation: 10,
+    elevation: 100,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: isDark ? 0.45 : 0.1,
     shadowRadius: 16,
   };
 
-  const toastContent = (
-    <Animated.View
-      style={[animatedStyle, containerStyle]}
-      className="bg-md-surfaceContainer-high-light dark:bg-md-surfaceContainer-high-dark rounded-2xl overflow-hidden"
-    >
-      <View
-        style={{
-          position: 'absolute',
-          left: 0,
-          top: 0,
-          bottom: 0,
-          width: 4,
-          backgroundColor: accentColor,
-          borderTopLeftRadius: 16,
-          borderBottomLeftRadius: 16,
-        }}
-      />
-
-      <View className="pl-[18] pr-3 py-3.5">
-        <View className="flex-row items-start justify-between">
-          <View className="flex-row items-start flex-1 mr-2" style={{ gap: 10 }}>
-            <IconComponent size={18} color={accentColor} style={{ marginTop: 1 }} />
-            <View className="flex-1" style={{ gap: 2 }}>
-              <Text className="text-sm font-semibold text-md-onSurface-light dark:text-md-onSurface-dark leading-5">
-                {notification.title}
-              </Text>
-              {notification.message && (
-                <Text className="text-[13px] text-md-onSurfaceVariant-light dark:text-md-onSurfaceVariant-dark leading-[18px]">
-                  {notification.message}
-                </Text>
-              )}
-              {notification.action && (
-                <TouchableOpacity
-                  onPress={() => {
-                    notification.action?.onPress();
-                    handleDismiss();
-                  }}
-                  className="mt-1.5"
-                  hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-                >
-                  <Text
-                    style={{ color: accentColor }}
-                    className="text-xs font-bold"
-                  >
-                    {notification.action.label}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-
-          <TouchableOpacity
-            onPress={handleDismiss}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            className="p-1 -m-1"
-          >
-            <X size={14} color={isDark ? '#CAC4D0' : '#49454F'} />
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Animated.View>
-  );
-
-  if (Platform.OS === 'web') return toastContent;
-
   return (
     <GestureDetector gesture={gesture}>
-      {toastContent}
+      <Reanimated.View
+        style={[animatedStyle, containerStyle]}
+        className="bg-md-surfaceContainer-high-light dark:bg-md-surfaceContainer-high-dark rounded-lg overflow-hidden"
+      >
+        <ToastInner
+          notification={notification}
+          accentColor={accentColor}
+          isDark={isDark}
+          onDismiss={handleDismiss}
+        />
+      </Reanimated.View>
     </GestureDetector>
   );
 };

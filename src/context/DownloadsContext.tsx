@@ -7,22 +7,21 @@ interface DownloadsContextType {
   addDownload: (book: DownloadedBook) => Promise<void>;
   removeDownload: (id: string) => Promise<void>;
   isDownloaded: (id: string) => boolean;
+  updateDownloadProgress: (id: string, progress: number) => Promise<void>;
 }
 
 const DownloadsContext = createContext<DownloadsContextType | undefined>(undefined);
 
 export const DownloadsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [downloadedBooks, setDownloadedBooks] = useState<DownloadedBook[]>([]);
-  const { getDownloadedBooks, addDownloadedBook, removeDownloadedBook } = useDatabase();
+  const { getDownloadedBooks, addDownloadedBook, removeDownloadedBook, updateDownloadedProgressDB } = useDatabase();
 
   useEffect(() => {
     const init = async () => {
       try {
         const books = await getDownloadedBooks();
         setDownloadedBooks(books);
-        console.log(`[DownloadsContext] Loaded ${books.length} downloaded books`);
       } catch (error) {
-        console.error('[DownloadsContext] Error initializing:', error);
       }
     };
     init();
@@ -37,7 +36,6 @@ export const DownloadsProvider: React.FC<{ children: ReactNode }> = ({ children 
         return [book, ...prev];
       });
     } catch (error) {
-      console.error('[DownloadsContext] Error adding download:', error);
     }
   }, []);
 
@@ -46,14 +44,25 @@ export const DownloadsProvider: React.FC<{ children: ReactNode }> = ({ children 
       await removeDownloadedBook(id);
       setDownloadedBooks(prev => prev.filter(b => b.id !== id));
     } catch (error) {
-      console.error('[DownloadsContext] Error removing download:', error);
     }
   }, []);
 
   const isDownloaded = useCallback((id: string) => downloadedBooks.some(b => b.id === id), [downloadedBooks]);
 
+  const updateDownloadProgress = useCallback(async (id: string, progress: number) => {
+    try {
+      await updateDownloadedProgressDB(id, progress);
+      setDownloadedBooks(prev =>
+        prev.map(b =>
+          b.id === id ? { ...b, progress, lastReadAt: Date.now() } : b,
+        ),
+      );
+    } catch (error) {
+    }
+  }, []);
+
   return (
-    <DownloadsContext.Provider value={{ downloadedBooks, addDownload, removeDownload, isDownloaded }}>
+    <DownloadsContext.Provider value={{ downloadedBooks, addDownload, removeDownload, isDownloaded, updateDownloadProgress }}>
       {children}
     </DownloadsContext.Provider>
   );

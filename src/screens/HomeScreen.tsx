@@ -8,10 +8,11 @@ import {
   ScrollView,
   useWindowDimensions,
   Platform,
+  Image,
 } from 'react-native';
 
-import { useRouter } from 'expo-router';
-import { Filter } from 'lucide-react-native';
+import { useRouter, Link } from 'expo-router';
+import { Filter, User } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
@@ -32,6 +33,7 @@ import { useWishlist } from '../context/WishlistContext';
 import { useNotification } from '../context/NotificationContext';
 import { AppHeader, EmptyState, FeaturedSection, ReadingProgressCard, SectionHeader, HeroSection, FilterChip } from '../components';
 import { isDesktop, isMobile, isTablet } from '@/utils';
+import { useAuth } from '../context/AuthContext';
 
 const FILTER_CATEGORIES = [
   { id: 'all', label: 'All' },
@@ -74,11 +76,13 @@ export const HomeScreen: React.FC = () => {
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [searchMode, setSearchMode] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { user } = useAuth();
   const mobile = isMobile(width)
   const tablet = isTablet(width)
   const Desktop = isDesktop(width)
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const isAndroid = Platform.OS === 'android';
 
   useEffect(() => {
     return () => {
@@ -219,6 +223,7 @@ export const HomeScreen: React.FC = () => {
 
   const handleCloseBottomSheet = useCallback(() => {
     setBottomSheetVisible(false);
+    setSelectedBook(null);
   }, []);
 
   const handleFavoritePress = useCallback(
@@ -269,7 +274,7 @@ export const HomeScreen: React.FC = () => {
         setSearchMode(true);
       }
     },
-    placeholder: 'Search by title or author...',
+    placeholder: 'Search by title or author',
   };
 
   const filterChips = (
@@ -439,26 +444,59 @@ export const HomeScreen: React.FC = () => {
     <SafeAreaView className="flex-1 bg-md-background-light dark:bg-md-background-dark">
       <StatusBar barStyle="default" />
 
-      <AppHeader
-        title="Discover"
-        rightElement={
-          tablet ? (
-            <View className="flex-row gap-3">
-              <ThemeToggleButton />
-              <SearchBar {...searchBarProps} />
-            </View>
+      {isAndroid ? (
+        <View className="py-3 px-4 bg-md-surface-light dark:bg-md-surface-dark flex-row items-center gap-3 border-b-[1px] border-md-outline-variant-light dark:border-md-outline-variant-dark">
+          {user ? (
+            user.avatar_url ? (
+              <Link href={'/profile'}>
+                <Image
+                  source={{ uri: user.avatar_url }}
+                  className="w-11 h-11 rounded-lg"
+                />
+              </Link>
+            ) : (
+              <Link href={'/profile'}>
+                <View className="w-9 h-9 rounded-full items-center justify-center bg-md-primary-light dark:bg-md-primary-dark">
+                  <Text className="text-sm font-bold text-md-onPrimary-light dark:text-md-onPrimary-dark">
+                    {user.name.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              </Link>
+            )
           ) : (
-            <ThemeToggleButton />
-          )
-        }
-      />
+            <View className="w-9 h-9 rounded-full items-center justify-center bg-md-surfaceVariant-light dark:bg-md-surfaceVariant-dark">
+              <User size={18} color={isDark ? '#CAC4D0' : '#49454F'} />
+            </View>
+          )}
+          <View className="flex-1">
+            <SearchBar {...searchBarProps} />
+          </View>
+          <ThemeToggleButton />
+        </View>
+      ) : (
+        <AppHeader
+          title="Discover"
+          rightElement={
+            tablet ? (
+              <View className="flex-row gap-3">
+                <ThemeToggleButton />
+                <SearchBar {...searchBarProps} />
+              </View>
+            ) : (
+              <ThemeToggleButton />
+            )
+          }
+        />
+      )}
 
       {/* Scrollable Content */}
       <View className="flex-1">
-        {/* Search - mobile only */}
-        <View className={`${tablet && 'hidden'} px-5 pb-3 mt-3`}>
-          <SearchBar {...searchBarProps} />
-        </View>
+        {/* Search - mobile only (hidden on Android — shown in header) */}
+        {!isAndroid && (
+          <View className={`${tablet && 'hidden'} px-5 pb-3 mt-3`}>
+            <SearchBar {...searchBarProps} />
+          </View>
+        )}
 
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -495,9 +533,19 @@ export const HomeScreen: React.FC = () => {
 
           {/* Discover Online - mobile only */}
           {!searchMode && mobile && (
-            <View>
+            <View className='mt-3'>
               <SectionHeader title="Discover Online" />
-              {discoverOnlineBooks.length > 0 ? (
+              {discoverOnlineQuery.isLoading ? (
+                <View className="pb-4">
+                  <SkeletonHorizontal />
+                </View>
+              ) : discoverOnlineQuery.isError ? (
+                <View className="px-5 pb-4">
+                  <Text className="text-md-body-medium text-md-error-light dark:text-md-error-dark">
+                    Couldn't load discoveries. Pull to refresh.
+                  </Text>
+                </View>
+              ) : discoverOnlineBooks.length > 0 ? (
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -515,8 +563,10 @@ export const HomeScreen: React.FC = () => {
                   ))}
                 </ScrollView>
               ) : (
-                <View className="pb-4">
-                  <SkeletonHorizontal />
+                <View className="px-5 pb-4">
+                  <Text className="text-md-body-medium text-md-onSurfaceVariant-light dark:text-md-onSurfaceVariant-dark">
+                    No books available right now.
+                  </Text>
                 </View>
               )}
             </View>
@@ -532,6 +582,7 @@ export const HomeScreen: React.FC = () => {
 
       {/* Bottom Sheet / Modal */}
       <BookBottomSheet
+        key={selectedBook?.key || 'none'}
         book={selectedBook}
         visible={bottomSheetVisible}
         onClose={handleCloseBottomSheet}

@@ -150,31 +150,31 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <GestureHandlerRootView style={{ flex: 1 }} className="bg-md-background-light dark:bg-md-background-dark">
-        <BottomSheetModalProvider>
-          <QueryClientProvider client={queryClient}>
-            <SafeAreaProvider>
-              <SQLiteProvider databaseName="books.db" onInit={initDatabaseTables}>
-                <ConnectivityProvider>
-                  <WishlistProvider>
-                    <ReadingProvider>
-                      <DownloadsProvider>
-                    <ReaderPreferencesProvider>
-                      <SplashProvider>
-                        <NotificationProvider>
-                          <AuthProvider>
-                            <AppContent />
-                          </AuthProvider>
-                        </NotificationProvider>
-                      </SplashProvider>
-                    </ReaderPreferencesProvider>
-                      </DownloadsProvider>
-                    </ReadingProvider>
-                  </WishlistProvider>
-                </ConnectivityProvider>
-              </SQLiteProvider>
-            </SafeAreaProvider>
-          </QueryClientProvider>
-        </BottomSheetModalProvider>
+        <SafeAreaProvider>
+          <NotificationProvider>
+            <BottomSheetModalProvider>
+              <QueryClientProvider client={queryClient}>
+                <SQLiteProvider databaseName="books.db" onInit={initDatabaseTables}>
+                  <ConnectivityProvider>
+                    <WishlistProvider>
+                      <ReadingProvider>
+                        <DownloadsProvider>
+                          <ReaderPreferencesProvider>
+                            <SplashProvider>
+                              <AuthProvider>
+                                <AppContent />
+                              </AuthProvider>
+                            </SplashProvider>
+                          </ReaderPreferencesProvider>
+                        </DownloadsProvider>
+                      </ReadingProvider>
+                    </WishlistProvider>
+                  </ConnectivityProvider>
+                </SQLiteProvider>
+              </QueryClientProvider>
+            </BottomSheetModalProvider>
+          </NotificationProvider>
+        </SafeAreaProvider>
       </GestureHandlerRootView>
     </ThemeProvider>
   );

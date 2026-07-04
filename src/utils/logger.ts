@@ -1,62 +1,14 @@
 export const Logger = {
-  source: (source: string, message: string) => {
-    console.log(`[${source}] ${message}`);
-  },
-
-  api: (
-    method: string,
-    url: string,
-    options?: { limit?: number; offset?: number; query?: string },
-  ) => {
-    const opts = options
-      ? ` (limit: ${options.limit}, offset: ${options.offset})`
-      : '';
-    console.log(`[API] ${method}: ${url}${opts}`);
-  },
-
+  source: (_source: string, _message: string) => {},
+  api: (_method: string, _url: string, _options?: { limit?: number; offset?: number; query?: string }) => {},
   Books: {
-    total: (count: number) => {
-      console.log(`[Books] Total received: ${count}`);
-    },
-
-    breakdown: (readable: number, notReadable: number, source: string) => {
-      const total = readable + notReadable;
-      console.log(
-        `[Books] ${source} - Total: ${total} | Readable (Public Domain): ${readable} | Not Readable (Premium): ${notReadable}`,
-      );
-    },
-
-    filtered: (from: number, to: number, filterType: string) => {
-      console.log(`[Books] Filtered: ${from} → ${to} (${filterType})`);
-    },
-
-    item: (title: string, isReadable: boolean) => {
-      console.log(
-        `[Books] ${title}: ${isReadable ? '✅ READABLE' : '🔒 PREMIUM'}`,
-      );
-    },
-
-    match: (title: string, gutenbergId?: number) => {
-      if (gutenbergId) {
-        console.log(`[Gutenberg] MATCH: "${title}" → ID: ${gutenbergId}`);
-      } else {
-        console.log(`[Gutenberg] NO MATCH: "${title}"`);
-      }
-    },
+    total: (_count: number) => {},
+    breakdown: (_readable: number, _notReadable: number, _source: string) => {},
+    filtered: (_from: number, _to: number, _filterType: string) => {},
+    item: (_title: string, _isReadable: boolean) => {},
+    match: (_title: string, _gutenbergId?: number) => {},
   },
-
-  navigation: (from: string, to: string) => {
-    console.log(`[Nav] ${from} → ${to}`);
-  },
-
-  action: (action: string, details?: string) => {
-    console.log(`[Action] ${action}${details ? `: ${details}` : ''}`);
-  },
-
-  data: (label: string, data: any) => {
-    console.log(
-      `[Data] ${label}:`,
-      JSON.stringify(data, null, 2).substring(0, 500),
-    );
-  },
+  navigation: (_from: string, _to: string) => {},
+  action: (_action: string, _details?: string) => {},
+  data: (_label: string, _data: any) => {},
 };

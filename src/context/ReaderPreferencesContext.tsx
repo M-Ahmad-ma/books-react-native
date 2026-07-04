@@ -50,7 +50,6 @@ export const ReaderPreferencesProvider: React.FC<{ children: ReactNode }> = ({ c
           });
         }
       } catch (error) {
-        console.error('[ReaderPreferences] Error initializing:', error);
       } finally {
         setIsLoaded(true);
       }
@@ -65,7 +64,6 @@ export const ReaderPreferencesProvider: React.FC<{ children: ReactNode }> = ({ c
         [newPrefs.theme, newPrefs.font, newPrefs.fontSize, newPrefs.lineHeight]
       );
     } catch (error) {
-      console.error('[ReaderPreferences] Error saving:', error);
     }
   }, [db]);
 

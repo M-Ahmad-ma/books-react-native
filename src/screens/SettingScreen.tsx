@@ -6,6 +6,7 @@ import {
   StatusBar,
   useWindowDimensions,
   Animated,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BookOpen, Heart, Library, Bookmark, Globe, Sparkles, Quote } from 'lucide-react-native';
@@ -22,8 +23,8 @@ function FadeIn({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 500, delay, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 500, delay, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 1, duration: 500, delay, useNativeDriver: Platform.OS !== 'web' }),
+      Animated.timing(translateY, { toValue: 0, duration: 500, delay, useNativeDriver: Platform.OS !== 'web' }),
     ]).start();
   }, []);
 
@@ -141,25 +142,25 @@ export default function AboutScreen() {
               </Text>
             </View>
 
-            <View className={`${wide ? 'flex-1' : ''} rounded-xl px-4 py-4`} style={{ backgroundColor: isDark ? '#2B2930' : '#F5F0FA' }}>
-              <Sparkles size={18} color={primaryColor} strokeWidth={1.5} />
-              <Text className="text-md-label-medium text-md-onSurface-light dark:text-md-onSurface-dark mt-2 mb-1">
-                Built With
-              </Text>
-              <Text className="text-md-body-small text-md-onSurfaceVariant-light dark:text-md-onSurfaceVariant-dark leading-5">
-                React Native · Expo · TypeScript · NativeWind
-              </Text>
-            </View>
-
-            <View className={`${wide ? 'flex-1' : ''} rounded-xl px-4 py-4`} style={{ backgroundColor: isDark ? '#2B2930' : '#F5F0FA' }}>
-              <Quote size={18} color={primaryColor} strokeWidth={1.5} />
-              <Text className="text-md-label-medium text-md-onSurface-light dark:text-md-onSurface-dark mt-2 mb-1">
-                Icons
-              </Text>
-              <Text className="text-md-body-small text-md-onSurfaceVariant-light dark:text-md-onSurfaceVariant-dark leading-5">
-                Lucide
-              </Text>
-            </View>
+            {/* <View className={`${wide ? 'flex-1' : ''} rounded-xl px-4 py-4`} style={{ backgroundColor: isDark ? '#2B2930' : '#F5F0FA' }}> */}
+            {/*   <Sparkles size={18} color={primaryColor} strokeWidth={1.5} /> */}
+            {/*   <Text className="text-md-label-medium text-md-onSurface-light dark:text-md-onSurface-dark mt-2 mb-1"> */}
+            {/*     Built With */}
+            {/*   </Text> */}
+            {/*   <Text className="text-md-body-small text-md-onSurfaceVariant-light dark:text-md-onSurfaceVariant-dark leading-5"> */}
+            {/*     React Native · Expo · TypeScript · NativeWind */}
+            {/*   </Text> */}
+            {/* </View> */}
+            {/**/}
+            {/* <View className={`${wide ? 'flex-1' : ''} rounded-xl px-4 py-4`} style={{ backgroundColor: isDark ? '#2B2930' : '#F5F0FA' }}> */}
+            {/*   <Quote size={18} color={primaryColor} strokeWidth={1.5} /> */}
+            {/*   <Text className="text-md-label-medium text-md-onSurface-light dark:text-md-onSurface-dark mt-2 mb-1"> */}
+            {/*     Icons */}
+            {/*   </Text> */}
+            {/*   <Text className="text-md-body-small text-md-onSurfaceVariant-light dark:text-md-onSurfaceVariant-dark leading-5"> */}
+            {/*     Lucide */}
+            {/*   </Text> */}
+            {/* </View> */}
           </View>
         </View>
       </FadeIn>

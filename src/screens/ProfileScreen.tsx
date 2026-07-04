@@ -9,6 +9,8 @@ import {
   useWindowDimensions,
   Alert,
   Animated,
+  Image,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -22,6 +24,7 @@ import {
   X,
   BookCheck,
   Calendar,
+  Camera,
 } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import { useAuth } from '../context/AuthContext';
@@ -30,24 +33,64 @@ import { useReading } from '../context/ReadingContext';
 import { AppHeader } from '../components/AppHeader';
 import { ThemeToggleButton } from '../navigation/AppNavigator';
 import { isDesktop, isTablet } from '@/utils';
+import { pickImage } from '@/utils/pickImage';
 
-function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: number | string; color: string }) {
+function StatCard({
+  icon,
+  label,
+  value,
+  color,
+  wide,
+  small,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number | string;
+  color: string;
+  wide: boolean;
+  small: boolean;
+}) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(16)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 500, delay: 200, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 500, delay: 200, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 500, delay: 200, useNativeDriver: Platform.OS !== 'web' }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 500, delay: 200, useNativeDriver: Platform.OS !== 'web' }),
     ]).start();
   }, []);
 
+  // Dynamic width
+  let width = '47%';
+  if (small) width = '30%';
+  if (wide) width = '100%'; // or 'auto' for flex
+
   return (
     <Animated.View
-      className="flex-1 rounded-2xl bg-md-surface-light dark:bg-md-surface-dark border border-md-outline-variant-light dark:border-md-outline-variant-dark px-4 py-5 items-center"
-      style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
+      className={`
+        rounded-2xl 
+        bg-md-surface-light dark:bg-md-surface-dark
+        border border-md-outline-variant-light dark:border-md-outline-variant-dark
+        items-center justify-center
+        p-4 py-5
+        min-h-[100px]
+        shadow-sm
+        ${Platform.OS === 'web' ? 'hover:shadow-md transition-shadow' : ''}
+      `}
+      style={[
+        { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+        { width },
+        wide && { flex: 1, alignItems: 'center', justifyContent: 'center' },
+      ]}
     >
-      <View className="mb-2">{icon}</View>
+      {/* Optional: accent circle behind icon */}
+      <View
+        className="w-10 h-10 rounded-full items-center justify-center mb-2"
+        style={{ backgroundColor: color + '20' }} // 20% opacity of the primary color
+      >
+        {icon}
+      </View>
+
       <Text className="text-[28px] font-bold tracking-tight text-md-onSurface-light dark:text-md-onSurface-dark">
         {value}
       </Text>
@@ -68,25 +111,40 @@ export function ProfileScreen() {
   const desktop = isDesktop(width);
   const tablet = isTablet(width);
   const wide = desktop || tablet;
+  const small = width < 640;
 
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(user?.name || '');
   const [bio, setBio] = useState(user?.bio || '');
+  const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || '');
   const [saving, setSaving] = useState(false);
 
   const finishedBooks = readingBooks.filter(b => (b.progress ?? 0) >= 100);
+  const inputBg = isDark ? '#36343B' : '#F3EDF7';
 
   useEffect(() => {
     if (user) {
       setName(user.name);
       setBio(user.bio || '');
+      setAvatarUrl(user.avatar_url || '');
     }
   }, [user]);
+
+  async function handlePickImage() {
+    const dataUrl = await pickImage();
+    if (dataUrl) {
+      setAvatarUrl(dataUrl);
+    }
+  }
 
   async function handleSave() {
     setSaving(true);
     try {
-      await updateUserProfile({ name: name.trim(), bio: bio.trim() || undefined });
+      await updateUserProfile({
+        name: name.trim(),
+        bio: bio.trim() || undefined,
+        avatar_url: avatarUrl.trim() || undefined,
+      });
       setEditing(false);
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to update profile');
@@ -98,6 +156,7 @@ export function ProfileScreen() {
   function handleCancel() {
     setName(user?.name || '');
     setBio(user?.bio || '');
+    setAvatarUrl(user?.avatar_url || '');
     setEditing(false);
   }
 
@@ -116,9 +175,13 @@ export function ProfileScreen() {
     <>
       <View className="items-center pt-8 pb-6 px-6">
         <View className="relative mb-5">
-          <View className="w-20 h-20 rounded-2xl items-center justify-center" style={{ backgroundColor: primaryColor, borderWidth: 3, borderColor: isDark ? '#D0BCFF' : '#EADDFF' }}>
-            <Text className="text-[32px] font-bold text-white">{avatarLetter}</Text>
-          </View>
+          {user.avatar_url ? (
+            <Image source={{ uri: user.avatar_url }} className="w-20 h-20 rounded-2xl" style={{ borderWidth: 3, borderColor: isDark ? '#D0BCFF' : '#EADDFF' }} />
+          ) : (
+            <View className="w-28 h-28 rounded-2xl items-center justify-center" style={{ backgroundColor: primaryColor, borderWidth: 3, borderColor: isDark ? '#D0BCFF' : '#EADDFF' }}>
+              <Text className="text-[32px] font-bold text-white">{avatarLetter}</Text>
+            </View>
+          )}
         </View>
         <Text className="text-[28px] font-bold tracking-tight text-md-onSurface-light dark:text-md-onSurface-dark">
           {user.name}
@@ -131,24 +194,30 @@ export function ProfileScreen() {
         </View>
       </View>
 
-      <View className="flex-row mx-4 gap-3 mb-6">
+      <View className={`gap-3 mb-6 ${!wide ? 'flex  flex-row justify-center' : 'w-full p-3  flex flex-row items-center justify-center'}`}>
         <StatCard
           icon={<Bookmark size={20} color={primaryColor} strokeWidth={1.5} />}
           label="Wishlist"
           value={wishlist.length}
           color={primaryColor}
+          wide={wide}
+          small={small}
         />
         <StatCard
           icon={<Library size={20} color={primaryColor} strokeWidth={1.5} />}
           label="Reading"
           value={readingBooks.length}
           color={primaryColor}
+          wide={wide}
+          small={small}
         />
         <StatCard
           icon={<BookCheck size={20} color={primaryColor} strokeWidth={1.5} />}
           label="Finished"
           value={finishedBooks.length}
           color={primaryColor}
+          wide={wide}
+          small={small}
         />
       </View>
 
@@ -197,9 +266,37 @@ export function ProfileScreen() {
           <>
             <View className="mb-4">
               <Text className="text-md-label-medium text-md-onSurfaceVariant-light dark:text-md-onSurfaceVariant-dark mb-1.5 ml-1">
+                Avatar
+              </Text>
+              <TouchableOpacity
+                className="flex-row items-center rounded-xl px-4 py-3"
+                style={{ backgroundColor: inputBg }}
+                onPress={handlePickImage}
+                activeOpacity={0.7}
+              >
+                {avatarUrl ? (
+                  <Image source={{ uri: avatarUrl }} className="w-10 h-10 rounded-xl" />
+                ) : (
+                  <View className="w-10 h-10 rounded-xl items-center justify-center bg-md-surfaceVariant-light dark:bg-md-surfaceVariant-dark">
+                    <User size={18} color={labelColor} />
+                  </View>
+                )}
+                <View className="flex-1 ml-3">
+                  <Text className="text-md-body-large text-md-onSurface-light dark:text-md-onSurface-dark">
+                    {avatarUrl ? 'Change Photo' : 'Add Photo'}
+                  </Text>
+                  <Text className="text-md-body-small text-md-onSurfaceVariant-light dark:text-md-onSurfaceVariant-dark mt-0.5">
+                    Pick from your device
+                  </Text>
+                </View>
+                <Camera size={18} color={labelColor} />
+              </TouchableOpacity>
+            </View>
+            <View className="mb-4">
+              <Text className="text-md-label-medium text-md-onSurfaceVariant-light dark:text-md-onSurfaceVariant-dark mb-1.5 ml-1">
                 Name
               </Text>
-              <View className="flex-row items-center rounded-xl px-4" style={{ backgroundColor: surfaceColor }}>
+              <View className="flex-row items-center rounded-xl px-4" style={{ backgroundColor: inputBg }}>
                 <User size={18} color={labelColor} />
                 <TextInput
                   className="flex-1 py-3 pl-3 text-md-body-large text-md-onSurface-light dark:text-md-onSurface-dark"
@@ -214,7 +311,7 @@ export function ProfileScreen() {
               <Text className="text-md-label-medium text-md-onSurfaceVariant-light dark:text-md-onSurfaceVariant-dark mb-1.5 ml-1">
                 Bio
               </Text>
-              <View className="rounded-xl px-4" style={{ backgroundColor: surfaceColor }}>
+              <View className="rounded-xl px-4" style={{ backgroundColor: inputBg }}>
                 <TextInput
                   className="py-3 text-md-body-large text-md-onSurface-light dark:text-md-onSurface-dark"
                   value={bio}

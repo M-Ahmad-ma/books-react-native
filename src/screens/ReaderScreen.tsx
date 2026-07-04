@@ -6,6 +6,7 @@ import { ArrowLeft, Settings, X } from 'lucide-react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import { getCachePath, isCached, downloadToCache } from '../utils/readerCache';
 import { useReading } from '../context/ReadingContext';
+import { useDownloads } from '../context/DownloadsContext';
 import { useReaderPreferences } from '../context/ReaderPreferencesContext';
 import { ReaderSettingsSheet } from '../components/ReaderSettingsSheet';
 import { SkeletonReaderHeader, SkeletonReaderContent } from '../components/Skeleton';
@@ -97,7 +98,6 @@ if (Platform.OS !== 'web') {
           const cacheId = getGutenbergIdFromUri(source.uri);
           if (cacheId && webContentCache.has(cacheId)) {
             html = webContentCache.get(cacheId)!;
-            log('Reader', '✅ Using cached web content for:', cacheId);
           }
         }
 
@@ -128,7 +128,6 @@ if (Platform.OS !== 'web') {
         const cacheKey = source?.uri ? getGutenbergIdFromUri(source.uri) : null;
         if (cacheKey && !webContentCache.has(cacheKey) && !source?.html) {
           webContentCache.set(cacheKey, html);
-          log('Reader', '💾 Cached web content for:', cacheKey);
         }
 
         if (html) {
@@ -170,6 +169,13 @@ if (Platform.OS !== 'web') {
                     }
                     style.textContent = event.data.css;
                     window.parent.postMessage(JSON.stringify({ type: 'styles-applied' }), '*');
+                  }
+                  if (event.data && event.data.type === 'scroll-restore') {
+                    var pct = event.data.progress;
+                    setTimeout(function() {
+                      var sh = document.documentElement.scrollHeight - window.innerHeight;
+                      window.scrollTo(0, (pct / 100) * sh);
+                    }, 300);
                   }
                 });
               })();
@@ -273,9 +279,7 @@ const webContentCache = new Map<string, string>();
 const log = (tag: string, message: string, data?: any) => {
   const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
   if (data) {
-    console.log(`[${timestamp}] [${tag}] ${message}:`, data);
   } else {
-    console.log(`[${timestamp}] [${tag}] ${message}`);
   }
 };
 
@@ -297,6 +301,7 @@ export const ReaderScreen: React.FC = () => {
   const params = useLocalSearchParams<{ id: string; localFile?: string; format?: string }>();
   const insets = useSafeAreaInsets();
   const { getReadingBook, updateProgress } = useReading();
+  const { downloadedBooks, updateDownloadProgress } = useDownloads();
   const { preferences, getThemeColors, getFontFamily, isLoaded } = useReaderPreferences();
 
   const webViewRef = useRef<any>(null);
@@ -309,15 +314,21 @@ export const ReaderScreen: React.FC = () => {
   const [currentProgress, setCurrentProgress] = useState(0);
   const [loadTimedOut, setLoadTimedOut] = useState(false);
   const [showLoading, setShowLoading] = useState(false);
-  // FIX: Track if content has been rendered (styles applied)
   const [contentRendered, setContentRendered] = useState(false);
+
+  const progressRef = useRef(currentProgress);
+  const rawFileContentRef = useRef<string | null>(null);
+  useEffect(() => {
+    progressRef.current = currentProgress;
+  }, [currentProgress]);
 
   const bookId = params.id;
   const localFile = params.localFile;
   const format = params.format;
   const [localHtmlContent, setLocalHtmlContent] = useState<string | null>(null);
-  console.log('[Reader] Route params:', { bookId, localFile, format });
   const book = getReadingBook(bookId || '');
+  const dlBook = useMemo(() => downloadedBooks.find(b => b.id === bookId), [downloadedBooks, bookId]);
+  const savedProgress = book?.progress ?? dlBook?.progress ?? 0;
   const [cachedFileUri, setCachedFileUri] = useState<string | null>(null);
   const [cacheChecked, setCacheChecked] = useState(false);
   const gutenbergId = useMemo(() => localFile ? null : (book?.epubUrl ? getGutenbergId(book.epubUrl) : null), [book?.epubUrl, localFile]);
@@ -351,7 +362,6 @@ export const ReaderScreen: React.FC = () => {
       'hardwareBackPress',
       () => {
         if (webViewRef.current) {
-          console.log("go back")
           webViewRef.current.goBack();
           return true;
         }
@@ -373,16 +383,50 @@ export const ReaderScreen: React.FC = () => {
 
   useEffect(() => {
     if (!webViewReady) return;
+    const pct = progressRef.current;
     if (Platform.OS !== 'web' && webViewRef.current) {
       const injectStyles = generateInjectStyles();
       webViewRef.current.injectJavaScript(injectStyles);
       webViewRef.current.injectJavaScript(getScrollTrackingScript());
+      if (pct > 0) {
+        setTimeout(() => {
+          try {
+            webViewRef.current?.injectJavaScript(getScrollRestoreScript(progressRef.current));
+          } catch (e) {}
+        }, 300);
+      }
     }
     if (Platform.OS === 'web' && webFallbackRef.current) {
       const css = getReaderCss();
       webFallbackRef.current.postMessage({ type: 'apply-styles', css });
+      if (pct > 0) {
+        setTimeout(() => {
+          try {
+            webFallbackRef.current?.postMessage({ type: 'scroll-restore', progress: progressRef.current });
+          } catch (e) {}
+        }, 600);
+      }
     }
   }, [webViewReady, preferences.theme, preferences.font, preferences.fontSize, preferences.lineHeight]);
+
+  // Reactive scroll restoration: retries when savedProgress becomes available after WebView loads
+  useEffect(() => {
+    if (!webViewReady || savedProgress <= 0) return;
+
+    const retryDelays = [400, 800, 1400, 2200];
+    retryDelays.forEach(delay => {
+      setTimeout(() => {
+        try {
+          if (Platform.OS !== 'web' && webViewRef.current) {
+            webViewRef.current.injectJavaScript(getScrollRestoreScript(savedProgress));
+          }
+          if (Platform.OS === 'web' && webFallbackRef.current) {
+            webFallbackRef.current.postMessage({ type: 'scroll-restore', progress: savedProgress });
+          }
+        } catch (e) {}
+      }, delay);
+    });
+  }, [webViewReady, savedProgress]);
 
   const getReaderCss = useCallback(() => {
     return [
@@ -392,7 +436,9 @@ export const ReaderScreen: React.FC = () => {
       '  font-family: ' + fontFamily + ' !important;',
       '  font-size: ' + preferences.fontSize + 'px !important;',
       '  line-height: ' + preferences.lineHeight + ' !important;',
-      '  padding: 16px 20px !important;',
+      '  max-width: 720px !important;',
+      '  margin: 0 auto !important;',
+      '  padding: 16px 24px !important;',
       '}',
       'p { margin-bottom: 16px !important; text-align: justify !important; }',
       'h1, h2, h3, h4, h5, h6 { color: ' + themeColors.text + ' !important; margin: 24px 0 16px !important; }',
@@ -421,21 +467,19 @@ export const ReaderScreen: React.FC = () => {
   }, [getReaderCss]);
 
   const handleWebViewError = (err: any) => {
-    log('Reader', '❌ WebView Error:', err);
     setError(err.description || 'Failed to load book');
     setLoading(false);
     setContentRendered(true); // force hide loading
   };
 
   const handleWebViewLoadStart = () => {
-    log('Reader', '📖 WebView: Starting to load...');
+    if (contentRendered) return;
     setLoading(true);
     setContentRendered(false);
     setError(null);
   };
 
   const handleWebViewLoadEnd = () => {
-    log('Reader', '✅ WebView: Loaded successfully');
     // FIX: Do not set loading false here – wait for styles-applied
   };
 
@@ -443,36 +487,33 @@ export const ReaderScreen: React.FC = () => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
       if (data.type === 'styles-applied') {
-        log('Reader', '✅ Styles applied to WebView – content ready');
         setContentRendered(true);
       } else if (data.type === 'progress-update') {
         const progress = Math.min(100, Math.max(0, Math.round(data.progress)));
         setCurrentProgress(progress);
-        if (book && progress > 0) {
-          updateProgress(book.id, progress);
+        if (progress > 0) {
+          if (book) updateProgress(book.id, progress);
+          if (dlBook) updateDownloadProgress(bookId || '', progress);
         }
       }
     } catch (e) {
-      log('Reader', 'Error parsing message:', e);
     }
   };
 
   const handleWebViewLoad = () => {
     setWebViewReady(true);
-    setCurrentProgress(book?.progress ?? 0);
+    setCurrentProgress(savedProgress);
     if (Platform.OS !== 'web' && webViewRef.current) {
       try {
         webViewRef.current.injectJavaScript(generateInjectStyles());
         webViewRef.current.injectJavaScript(getScrollTrackingScript());
       } catch (e) {
-        console.log('[Reader] Error injecting styles on load:', e);
       }
-      if (book && book.progress !== undefined && book.progress > 0) {
+      if (savedProgress > 0) {
         setTimeout(() => {
           try {
-            webViewRef.current.injectJavaScript(getScrollRestoreScript(book.progress ?? 0));
+            webViewRef.current.injectJavaScript(getScrollRestoreScript(savedProgress));
           } catch (e) {
-            console.log('[Reader] Error injecting scroll restore:', e);
           }
         }, 600);
       }
@@ -482,15 +523,12 @@ export const ReaderScreen: React.FC = () => {
         const css = getReaderCss();
         webFallbackRef.current.postMessage({ type: 'apply-styles', css });
       } catch (e) {
-        console.log('[Reader] Error posting styles on load:', e);
       }
-      if (book && book.progress !== undefined && book.progress > 0) {
+      if (savedProgress > 0) {
         setTimeout(() => {
           try {
-            const scrollPct = book.progress ?? 0;
-            webFallbackRef.current.postMessage({ type: 'scroll-restore', progress: scrollPct });
+            webFallbackRef.current.postMessage({ type: 'scroll-restore', progress: savedProgress });
           } catch (e) {
-            console.log('[Reader] Error posting scroll restore:', e);
           }
         }, 800);
       }
@@ -531,7 +569,6 @@ export const ReaderScreen: React.FC = () => {
   };
 
   const handleGoBack = () => {
-    console.log('[Reader] handleGoBack, platform:', Platform.OS, 'canGoBack:', webViewRef.current?.canGoBack);
     if (Platform.OS !== 'web' && webViewRef.current?.canGoBack) {
       webViewRef.current.goBack();
     } else {
@@ -540,30 +577,60 @@ export const ReaderScreen: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!localFile) {
-      return;
-    }
+    if (!localFile) return;
     const isTxt = format === 'TXT';
     const isHtml = format === 'HTML';
+    if (!isTxt && !isHtml) return;
 
-    if (isTxt || isHtml) {
-      FileSystem.readAsStringAsync(localFile, { encoding: FileSystem.EncodingType.UTF8 })
-        .then(content => {
-          const inlineStyles = `body{background-color:${themeColors.background}!important;color:${themeColors.text}!important;font-family:${fontFamily}!important;font-size:${preferences.fontSize}px!important;line-height:${preferences.lineHeight}!important;padding:16px 20px!important;}p{text-align:justify!important;margin-bottom:16px!important;}h1,h2,h3{color:${themeColors.text}!important;margin:24px 0 16px!important;}img{max-width:100%!important;height:auto!important;}`;
-
-          if (isTxt) {
-            const wrapped = `<html>
-<head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<style>${inlineStyles}body{white-space:pre-wrap;word-wrap:break-word;}</style></head>
-<body>${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</body></html>`;
-            setLocalHtmlContent(wrapped);
-          } else {
-            const styled = content.replace('</head>', `<style>${inlineStyles}</style></head>`);
-            setLocalHtmlContent(styled);
+    const scrollTrackingScript = `
+      <script>
+      (function() {
+        var lastProgress = 0;
+        function sendProgress() {
+          var scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+          var scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+          var progress = scrollHeight > 0 ? Math.round((scrollTop / scrollHeight) * 100) : 0;
+          if (progress !== lastProgress && progress >= 0 && progress <= 100) {
+            lastProgress = progress;
+            try {
+              var msg = JSON.stringify({ type: 'progress-update', progress: progress });
+              if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+                window.ReactNativeWebView.postMessage(msg);
+              } else if (window.parent) {
+                window.parent.postMessage(msg, '*');
+              }
+            } catch(e) {}
           }
-        })
-        .catch(err => console.error('[Reader] Failed to read file:', err));
-    }
+        }
+        window.addEventListener('scroll', sendProgress, { passive: true });
+        window.addEventListener('load', sendProgress);
+        setTimeout(sendProgress, 500);
+      })();
+      </script>
+    `;
+
+    const generateHtml = (raw: string) => {
+      const css = getReaderCss();
+      if (isTxt) {
+        return `<html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><style>${css}body{white-space:pre-wrap;word-wrap:break-word;}</style>${scrollTrackingScript}</head><body>${raw.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</body></html>`;
+      }
+      return raw.replace('</head>', `<style>${css}</style>${scrollTrackingScript}</head>`);
+    };
+
+    const loadFile = async () => {
+      let raw = rawFileContentRef.current;
+      if (!raw) {
+        try {
+          raw = await FileSystem.readAsStringAsync(localFile, { encoding: FileSystem.EncodingType.UTF8 });
+          rawFileContentRef.current = raw;
+        } catch {
+          return;
+        }
+      }
+      setLocalHtmlContent(generateHtml(raw));
+    };
+
+    loadFile();
   }, [localFile, format, themeColors, fontFamily, preferences]);
 
   useEffect(() => {
@@ -577,13 +644,10 @@ export const ReaderScreen: React.FC = () => {
       return;
     }
     setCacheChecked(false);
-    log('Reader', '🔍 Checking cache for gutenbergId:', gutenbergId);
     isCached(gutenbergId).then(found => {
       if (found) {
-        log('Reader', '✅ Found cached version:', gutenbergId);
         setCachedFileUri(getCachePath(gutenbergId));
       } else {
-        log('Reader', '❌ No cached version found:', gutenbergId);
         setCachedFileUri(null);
       }
       setCacheChecked(true);
@@ -593,13 +657,11 @@ export const ReaderScreen: React.FC = () => {
   useEffect(() => {
     if (Platform.OS === 'web' || !contentRendered || !gutenbergId || cachedFileUri) return;
     const remoteUrl = getHtmlUrl(gutenbergId);
-    log('Reader', '💾 Caching book in background:', gutenbergId);
     downloadToCache(remoteUrl, gutenbergId)
       .then(localUri => {
-        log('Reader', '✅ Cached successfully:', localUri);
         setCachedFileUri(localUri);
       })
-      .catch(err => log('Reader', '❌ Cache download failed:', err));
+      .catch(err => {});
   }, [contentRendered]);
 
   if (!isLoaded) {
@@ -612,7 +674,6 @@ export const ReaderScreen: React.FC = () => {
   }
 
   if (!book && !localFile) {
-    console.log('[Reader] No book found and no localFile — showing error');
     return (
       <SafeAreaView className="flex-1 bg-md-surface-light dark:bg-md-surface-dark items-center justify-center">
         <Text className="text-md-title-large text-md-onSurface-light dark:text-md-onSurface-dark">Book not found</Text>
@@ -637,20 +698,22 @@ export const ReaderScreen: React.FC = () => {
 
   let source;
   if (localHtmlContent) {
-    console.log('[Reader] Loading from local HTML content');
     source = { html: localHtmlContent, baseUrl: 'file:///' };
   } else if (gutenbergId && cachedFileUri) {
-    console.log('[Reader] Loading from cache:', cachedFileUri);
     source = { uri: cachedFileUri };
   } else if (book?.epubUrl) {
     const id = gutenbergId || getGutenbergId(book.epubUrl);
     const htmlUrl = id ? getHtmlUrl(id) : getFallbackUrl(id || '');
-    console.log('[Reader] Loading from remote:', htmlUrl);
     source = { uri: htmlUrl };
   }
 
-  if (!source) {
-    console.error('[Reader] No source available - book:', book?.id, 'localFile:', localFile);
+  if (!source && localFile && !localHtmlContent) {
+    return (
+      <SafeAreaView className="flex-1 bg-md-surface-light dark:bg-md-surface-dark">
+        <SkeletonReaderHeader />
+        <SkeletonReaderContent />
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -721,7 +784,7 @@ export const ReaderScreen: React.FC = () => {
               onLoadStart={handleWebViewLoadStart}
               onMessage={handleMessage}
               onError={handleWebViewError}
-              initialProgress={book?.progress ?? 0}
+              initialProgress={savedProgress}
             />
             {(showLoading || loadTimedOut) && (
               <View className="absolute inset-0 bg-md-surface-light dark:bg-md-surface-dark items-center justify-center z-10">
@@ -848,10 +911,26 @@ export const ReaderScreen: React.FC = () => {
                 const injectStyles = generateInjectStyles();
                 webViewRef.current.injectJavaScript(injectStyles);
                 webViewRef.current.injectJavaScript(getScrollTrackingScript());
+                const pct = progressRef.current;
+                if (pct > 0) {
+                  setTimeout(() => {
+                    try {
+                      webViewRef.current?.injectJavaScript(getScrollRestoreScript(progressRef.current));
+                    } catch (e) {}
+                  }, 300);
+                }
               }
               if (Platform.OS === 'web' && webFallbackRef.current) {
                 const css = getReaderCss();
                 webFallbackRef.current.postMessage({ type: 'apply-styles', css });
+                const pct = progressRef.current;
+                if (pct > 0) {
+                  setTimeout(() => {
+                    try {
+                      webFallbackRef.current?.postMessage({ type: 'scroll-restore', progress: progressRef.current });
+                    } catch (e) {}
+                  }, 600);
+                }
               }
             }, 100);
           }

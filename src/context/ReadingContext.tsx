@@ -9,14 +9,6 @@ import React, {
 import { ReadingBook, Book } from '../types';
 import { useDatabase } from '../services/database';
 
-const log = (tag: string, message: string, data?: any) => {
-  if (data) {
-    console.log(`[${tag}] ${message}:`, data);
-  } else {
-    console.log(`[${tag}] ${message}`);
-  }
-};
-
 interface ReadingContextType {
   readingBooks: ReadingBook[];
   isLoading: boolean;
@@ -39,7 +31,6 @@ export const getHtmlUrl = (epubUrl: string): string | undefined => {
   if (!gutenbergId) return undefined;
 
   const htmlUrl = `https://www.gutenberg.org/files/${gutenbergId}/${gutenbergId}-h/${gutenbergId}-h.htm`;
-  log('ReadingContext', `Generated HTML URL: ${htmlUrl}`);
 
   return htmlUrl;
 };
@@ -67,9 +58,7 @@ export const ReadingProvider: React.FC<{ children: ReactNode }> = ({
         setIsLoading(true);
         const books = await fetchReadingBooks();
         setReadingBooks(books);
-        log('ReadingContext', `Loaded ${books.length} reading books from DB`);
       } catch (error) {
-        console.error('[ReadingContext] Error initializing:', error);
       } finally {
         setIsLoading(false);
       }
@@ -106,7 +95,6 @@ export const ReadingProvider: React.FC<{ children: ReactNode }> = ({
         return [newBook, ...prev];
       });
     } catch (error) {
-      console.error('[ReadingContext] Error adding to reading:', error);
     }
   }, []);
 
@@ -115,7 +103,6 @@ export const ReadingProvider: React.FC<{ children: ReactNode }> = ({
       await removeFromReadingDB(id);
       setReadingBooks(prev => prev.filter(book => book.id !== id));
     } catch (error) {
-      console.error('[ReadingContext] Error removing from reading:', error);
     }
   }, []);
 
@@ -132,7 +119,6 @@ export const ReadingProvider: React.FC<{ children: ReactNode }> = ({
         ),
       );
     } catch (error) {
-      console.error('[ReadingContext] Error updating progress:', error);
     }
   }, []);
 

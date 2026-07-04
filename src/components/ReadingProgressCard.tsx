@@ -14,6 +14,7 @@ import {
 } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import { useReading } from '../context/ReadingContext';
+import { useDownloads } from '../context/DownloadsContext';
 import { getCoverUrl } from '../api/openLibrary';
 
 const getTimeAgo = (timestamp: number): string => {
@@ -38,16 +39,16 @@ export const ReadingProgressCard: React.FC<ReadingProgressCardProps> = ({ onBook
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const { readingBooks } = useReading();
+  const { downloadedBooks } = useDownloads();
 
-  const hasAnyBooks = readingBooks.length > 0;
-
-  const inProgress = readingBooks
-    .filter(b => b.progress !== undefined && b.progress > 0 && b.progress < 100)
-    .sort((a, b) => {
-      const aLast = b.lastReadAt || b.addedAt;
-      const bLast = a.lastReadAt || a.addedAt;
-      return aLast - bLast;
-    });
+  const inProgress = [
+    ...readingBooks.filter(b => b.progress !== undefined && b.progress > 0 && b.progress < 100),
+    ...downloadedBooks.filter(b => b.progress !== undefined && b.progress > 0 && b.progress < 100),
+  ].sort((a, b) => {
+    const aLast = b.lastReadAt || 0;
+    const bLast = a.lastReadAt || 0;
+    return aLast - bLast;
+  });
 
   const accentColor = isDark ? '#D0BCFF' : '#6750A4';
   const cardBg = isDark ? '#2B2930' : '#F5F0FF';
@@ -55,13 +56,11 @@ export const ReadingProgressCard: React.FC<ReadingProgressCardProps> = ({ onBook
   const progressFill = isDark ? '#D0BCFF' : '#6750A4';
   const muted = isDark ? '#938F99' : '#79747E';
   const onSurface = isDark ? '#E6E1E5' : '#1C1B1F';
-  if (!hasAnyBooks) return null;
 
   if (inProgress.length === 0) return null;
 
-  if (hasAnyBooks) {
-    return (
-      <View className="mb-5">
+  return (
+    <View className="mb-5 mt-3">
         <View className="flex-row items-center justify-between px-5 mb-3">
           <View className="flex-row items-center gap-2">
             <Text className="text-md-title-medium text-md-onSurface-light dark:text-md-onSurface-dark font-semibold">
@@ -191,7 +190,4 @@ export const ReadingProgressCard: React.FC<ReadingProgressCardProps> = ({ onBook
         </ScrollView>
       </View>
     );
-  }
-
-  return null;
-};
+  };

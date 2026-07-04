@@ -43,7 +43,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(JSON.parse(row.user_json));
       }
     } catch (err) {
-      console.warn('Failed to load auth session:', err);
     } finally {
       setIsLoading(false);
     }

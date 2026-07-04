@@ -68,6 +68,8 @@ export interface DownloadedBook {
   filePath: string;
   gutenbergId?: number;
   downloadedAt: number;
+  progress?: number;
+  lastReadAt?: number;
 }
 
 export interface ReadingBook {

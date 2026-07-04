@@ -38,7 +38,6 @@ export const ReadingListScreen: React.FC = () => {
   };
 
   const handleDownloadedBookPress = (item: DownloadedBook) => {
-    console.log('[ReadingList] Tapped downloaded book:', { id: item.id, filePath: item.filePath, format: item.format });
     if (item.format === 'TXT' || item.format === 'HTML') {
       router.push({
         pathname: '/reader/[id]',
@@ -51,11 +50,9 @@ export const ReadingListScreen: React.FC = () => {
 
   const handleRemoveBook = async (book: ReadingBook) => {
     try {
-      console.log('[ReadingList] Removing book:', book.id);
       await removeFromReading(book.id);
       showNotification({ type: 'info', title: 'Removed', message: 'Book removed from reading list' });
     } catch (error) {
-      console.error('[ReadingList] Error removing book:', error);
     }
   };
 
@@ -98,6 +95,20 @@ export const ReadingListScreen: React.FC = () => {
             >
               {item.author_name.join(', ')}
             </Text>
+          )}
+
+          {item.progress !== undefined && item.progress > 0 && (
+            <View className="mt-3">
+              <View className="h-1.5 bg-md-surfaceVariant-light dark:bg-md-surfaceVariant-dark rounded-full overflow-hidden">
+                <View
+                  className="h-full bg-md-primary-light dark:bg-md-primary-dark rounded-full"
+                  style={{ width: `${item.progress}%` }}
+                />
+              </View>
+              <Text className="text-md-label-small text-md-onSurfaceVariant-light dark:text-md-onSurfaceVariant-dark mt-1.5">
+                {item.progress}% complete
+              </Text>
+            </View>
           )}
 
           <View className="flex-row items-center mt-2 gap-2">
@@ -336,7 +347,6 @@ export const ReadingListScreen: React.FC = () => {
 
         <TouchableOpacity
           onPress={() => {
-            console.log('[ReadingList] Delete tapped for:', item.id);
             handleRemoveBook(item);
           }}
            className="w-10 h-10 absolute top-2 right-2 rounded-full items-center justify-center bg-md-errorContainer-light dark:bg-md-errorContainer-dark"
@@ -379,11 +389,13 @@ export const ReadingListScreen: React.FC = () => {
           </View>
         ) : undefined}
         ListEmptyComponent={
-          <EmptyState
-            icon={<Library size={40} color="#CAC4D0" />}
-            title="No books yet"
-            description="Add books from Discover to start reading"
-          />
+          readingBooks.length === 0 && downloadedBooks.length === 0 ? (
+            <EmptyState
+              icon={<Library size={40} color="#CAC4D0" />}
+              title="No books yet"
+              description="Add books from Discover to start reading"
+            />
+          ) : null
         }
       />
 

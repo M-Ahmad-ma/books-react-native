@@ -16,7 +16,6 @@ export const WishlistScreen: React.FC = () => {
   const { wishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const { showNotification } = useNotification();
 
-  console.log(wishlist, "[17 in wishlist] wishlist")
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [bottomSheetVisible, setBottomSheetVisible] = useState(false);
   const { width } = useWindowDimensions();
@@ -93,8 +92,6 @@ export const WishlistScreen: React.FC = () => {
     removeFromWishlist(book.key);
     showNotification({ type: 'info', title: 'Removed', message: 'Book removed from wishlist' });
   }, [removeFromWishlist, showNotification]);
-
-  console.log(selectedBook, "selectedBook [91 in wishlist]")
 
   if (desktop || tablet) {
     return (

@@ -69,6 +69,7 @@ export const BookBottomSheet: React.FC<BookBottomSheetProps> = ({
   const [downloadingFormat, setDownloadingFormat] = useState<string | null>(null);
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const [localVisible, setLocalVisible] = useState(false);
+  const closingRef = useRef(false);
   const translateX = useSharedValue(DRAWER_WIDTH);
   const backdropOpacity = useSharedValue(0);
 
@@ -143,12 +144,15 @@ export const BookBottomSheet: React.FC<BookBottomSheetProps> = ({
   // Drawer animation with Reanimated (UI thread, 60fps)
   useEffect(() => {
     if (isLargeScreen && visible) {
+      if (closingRef.current) return;
       setLocalVisible(true);
       translateX.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.cubic) });
       backdropOpacity.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.cubic) });
     } else if (isLargeScreen && !visible) {
+      closingRef.current = true;
       translateX.value = withTiming(DRAWER_WIDTH, { duration: 250, easing: Easing.in(Easing.cubic) }, () => {
         runOnJS(setLocalVisible)(false);
+        runOnJS(() => { closingRef.current = false; })();
       });
       backdropOpacity.value = withTiming(0, { duration: 250 });
     }
@@ -271,7 +275,6 @@ export const BookBottomSheet: React.FC<BookBottomSheetProps> = ({
 
       showNotification({ type: 'success', title: 'Download Complete', message: `"${fmt.format}" saved.` });
     } catch (err: any) {
-      console.error('[Download] Error:', err?.message, err);
       showNotification({ type: 'error', title: 'Download Error', message: err?.message || 'Failed to download file' });
     } finally {
       setDownloadingFormat(null);
@@ -442,7 +445,7 @@ export const BookBottomSheet: React.FC<BookBottomSheetProps> = ({
         </View>
 
         {/* Download Section */}
-        {Platform.OS !== 'web' && (downloadFormats.length > 0 || loadingFormats) && (
+        {Platform.OS !== 'web' && (Platform.OS === 'android' ? (loadingFormats || downloadFormats.some(f => f.format === 'HTML')) : downloadFormats.length > 0 || loadingFormats) && (
           <View className="mt-6">
             <View className="flex-row items-center mb-3">
               <Download size={18} color="#49454F" />
@@ -460,7 +463,7 @@ export const BookBottomSheet: React.FC<BookBottomSheetProps> = ({
               </View>
             ) : (
               <View className="flex-row flex-wrap gap-2">
-                {downloadFormats.map((fmt) => {
+                {downloadFormats.filter(f => Platform.OS !== 'android' || f.format === 'HTML').map((fmt) => {
                   const isDownloading = downloadingFormat === fmt.format;
                   return (
                     <TouchableOpacity
@@ -478,7 +481,7 @@ export const BookBottomSheet: React.FC<BookBottomSheetProps> = ({
                         <Download size={16} color="#49454F" />
                       )}
                       <Text className="text-md-label-medium text-md-onSecondaryContainer-light dark:text-md-onSecondaryContainer-dark ml-2">
-                        {fmt.format}
+                        {Platform.OS === 'android' ? 'Download' : fmt.format}
                       </Text>
                     </TouchableOpacity>
                   );

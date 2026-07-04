@@ -6,14 +6,6 @@ const GUTENBERG_BASE = 'https://www.gutenberg.org';
 const GUTENBERG_API = `${GUTENBERG_BASE}/ebooks`;
 export const GUTENDEX_API = 'https://gutendex.com/books';
 
-const log = (tag: string, message: string, data?: any) => {
-  if (data) {
-    console.log(`[${tag}] ${message}:`, data);
-  } else {
-    console.log(`[${tag}] ${message}`);
-  }
-};
-
 export interface GutenbergBook {
   id: number;
   title: string;
@@ -267,29 +259,23 @@ export const getGutenbergEpubUrl = async (
 ): Promise<string> => {
   const urls = getEpubUrls(gutenbergId);
 
-  log('Gutenberg', `Checking EPUB formats for ID: ${gutenbergId}`);
 
   for (const url of urls) {
     try {
-      log('Gutenberg', `Trying: ${url}`);
       const response = await fetch(url, { method: 'HEAD' });
       if (response.ok || response.status === 405) {
-        log('Gutenberg', `✅ SUCCESS: ${url}`);
         return url;
       }
     } catch {
-      log('Gutenberg', `❌ Failed: ${url}`);
       continue;
     }
   }
 
-  log('Gutenberg', `⚠️  Using fallback: ${urls[urls.length - 1]}`);
   return `${GUTENBERG_API}/${gutenbergId}.epub`;
 };
 
 export const getGutenbergCoverUrl = (gutenbergId: number): string => {
   const url = `${GUTENBERG_BASE}/cache/epub/${gutenbergId}/pg${gutenbergId}.cover.medium.jpg`;
-  log('Gutenberg', `Cover URL: ${url}`);
   return url;
 };
 
@@ -297,19 +283,12 @@ export const findGutenbergBook = async (
   title: string,
   author?: string,
 ): Promise<GutenbergBook | null> => {
-  log('Gutenberg', `Searching: "${title}" by ${author || 'Unknown'}`);
 
   const match = findBestMatch(title, author);
 
   if (!match) {
-    log('Gutenberg', `❌ NO MATCH FOUND: "${title}"`);
     return null;
   }
-
-  log(
-    'Gutenberg',
-    `✅ MATCH FOUND: "${match.title}" (ID: ${match.gutenbergId})`,
-  );
 
   const epubUrl = await getGutenbergEpubUrl(match.gutenbergId);
 
@@ -317,34 +296,26 @@ export const findGutenbergBook = async (
   let subjects: string[] | undefined;
   let firstPublishYear: number | undefined;
 
-  log('Gutenberg', `Fetching metadata from Gutendex for ID: ${match.gutenbergId}`);
   try {
     const gutendexUrl = `${GUTENDEX_API}/${match.gutenbergId}`;
     const gutendexResponse = await fetch(gutendexUrl);
-    log('Gutenberg', `Gutendex response status: ${gutendexResponse.status}`);
 
     if (gutendexResponse.ok) {
       const metadata = await gutendexResponse.json();
-      log('Gutenberg', `Gutendex metadata keys:`, Object.keys(metadata));
 
       if (metadata.summaries?.length > 0) {
         summary = metadata.summaries[0];
-        log('Gutenberg', `Summary found: ${summary!.substring(0, 100)}...`);
       }
       if (metadata.subjects?.length > 0) {
         subjects = metadata.subjects.slice(0, 10);
-        log('Gutenberg', `Subjects found:`, subjects);
       }
       const author0 = metadata.authors?.[0] as { name: string; birth_year?: number; death_year?: number } | undefined;
       if (author0?.birth_year && author0.death_year) {
         firstPublishYear = Math.floor((author0.birth_year + author0.death_year) / 2);
-        log('Gutenberg', `First publish year: ${firstPublishYear}`);
       }
     } else {
-      log('Gutenberg', `Gutendex fetch failed with status: ${gutendexResponse.status}`);
     }
   } catch (err) {
-    log('Gutenberg', `Failed to fetch Gutendex metadata for ${match.gutenbergId}:`, err);
   }
 
   return {
@@ -425,7 +396,6 @@ export const getGutenbergPublicDomainBooks = async (
     const topicParam = topic ? `&topic=${encodeURIComponent(topic)}` : '';
 
     const url = `${GUTENDEX_API}/?languages=en&page=${page}&per_page=${limit}${topicParam}`;
-    log('Gutenberg', `Fetching public domain books: ${url}`);
 
     const response = await fetch(url);
     if (!response.ok) {
@@ -433,10 +403,6 @@ export const getGutenbergPublicDomainBooks = async (
     }
 
     const data: GutendexResponse = await response.json();
-    log(
-      'Gutenberg',
-      `Received ${data.results?.length || 0} books (total: ${data.count})`,
-    );
 
     const books: GutenbergBook[] = (data.results || []).map(book => {
       const epubUrl = book.formats['application/epub+zip'] || '';
@@ -463,11 +429,9 @@ export const getGutenbergPublicDomainBooks = async (
         firstPublishYear,
       };
     });
-    log('Gutenberg', `Parsed ${books.length} public domain books`);
 
     return { books, next: data.next, count: data.count };
   } catch (error) {
-    log('Gutenberg', 'Error fetching public domain books:', error);
     throw error;
   }
 };
@@ -512,7 +476,6 @@ export const searchGutenbergBooks = async (
   const encodedQuery = encodeURIComponent(query);
   const url = `${GUTENDEX_API}/?search=${encodedQuery}&languages=en&page=${page}&per_page=${limit}${topicParam}`;
 
-  log('Gutenberg', `SEARCH: "${query}" (limit: ${limit}, page: ${page})`, url);
 
   try {
     const response = await fetch(url);
@@ -521,7 +484,6 @@ export const searchGutenbergBooks = async (
     }
 
     const data: GutendexResponse = await response.json();
-    log('Gutenberg', `Search results: ${data.count} total (page ${page})`);
 
     const docs: Book[] = (data.results || []).map(book => {
       const apiCoverUrl = book.formats['image/jpeg'] || '';
@@ -546,7 +508,6 @@ export const searchGutenbergBooks = async (
 
     return { numFound: data.count, start: 0, docs };
   } catch (error) {
-    log('Gutenberg', 'Search error:', error);
     throw error;
   }
 };
@@ -554,7 +515,6 @@ export const searchGutenbergBooks = async (
 export const getGutenbergBookDetails = async (workId: string): Promise<Book> => {
   try {
     const url = `${GUTENBERG_BASE}/works/${workId}.json`;
-    log('Gutenberg', `DETAILS: ${workId}`, url);
     const response = await fetch(url);
 
     if (!response.ok) {
@@ -562,10 +522,8 @@ export const getGutenbergBookDetails = async (workId: string): Promise<Book> => 
     }
 
     const data = await response.json();
-    log("DATA", data)
     return data;
   } catch (error) {
-    console.error('[OpenLibrary] Details error:', error);
     throw error;
   }
 };

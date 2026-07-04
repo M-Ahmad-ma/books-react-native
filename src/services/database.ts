@@ -18,8 +18,6 @@ export function useDatabase() {
   const db = useSQLiteContext();
 
   const initDatabase = async () => {
-    console.log('INIT_DB_START');
-
     await db.execAsync(`
     CREATE TABLE IF NOT EXISTS wishlist (
       key TEXT PRIMARY KEY,
@@ -49,7 +47,6 @@ export function useDatabase() {
     for (const { name, sql } of migrations) {
       if (!columnNames.has(name)) {
         await db.execAsync(sql);
-        console.log(`Added wishlist column: ${name}`);
       }
     }
 
@@ -79,30 +76,31 @@ export function useDatabase() {
       format TEXT NOT NULL,
       filePath TEXT NOT NULL,
       gutenbergId INTEGER,
-      downloadedAt INTEGER
+      downloadedAt INTEGER,
+      progress REAL DEFAULT 0,
+      lastReadAt INTEGER
     )
   `);
 
-    const columns = await db.getAllAsync(
-      'PRAGMA table_info(wishlist)'
+    // Migrate existing downloaded_books — add progress columns if missing
+    const dlColumns = await db.getAllAsync<{ name: string }>(
+      "SELECT name FROM pragma_table_info('downloaded_books')"
     );
-
-    console.log('WISHLIST_COLUMNS:', columns);
-
-    console.log('INIT_DB_COMPLETE');
+    const dlColumnNames = new Set(dlColumns.map(c => c.name));
+    const dlMigrations: { name: string; sql: string }[] = [
+      { name: 'progress', sql: 'ALTER TABLE downloaded_books ADD COLUMN progress REAL DEFAULT 0' },
+      { name: 'lastReadAt', sql: 'ALTER TABLE downloaded_books ADD COLUMN lastReadAt INTEGER' },
+    ];
+    for (const { name, sql } of dlMigrations) {
+      if (!dlColumnNames.has(name)) {
+        await db.execAsync(sql);
+      }
+    }
   };
   const getWishlist = async (): Promise<WishlistItem[]> => {
     const rows = await db.getAllAsync<any>(
       'SELECT * FROM wishlist ORDER BY addedAt DESC',
     );
-    console.log(rows, "rows at 75 in database")
-
-    const columns = await db.getAllAsync(
-      'PRAGMA table_info(wishlist)'
-    );
-
-    console.log(columns, "this is pragma");
-
 
     return rows.map((row: any) => ({
       key: row.key,
@@ -254,6 +252,8 @@ export function useDatabase() {
       filePath: row.filePath,
       gutenbergId: row.gutenbergId,
       downloadedAt: row.downloadedAt,
+      progress: row.progress,
+      lastReadAt: row.lastReadAt,
     })) as DownloadedBook[];
   };
 
@@ -288,6 +288,16 @@ export function useDatabase() {
     return (result?.count ?? 0) > 0;
   };
 
+  const updateDownloadedProgressDB = async (
+    id: string,
+    progress: number,
+  ): Promise<void> => {
+    await db.runAsync(
+      'UPDATE downloaded_books SET progress = ?, lastReadAt = ? WHERE id = ?',
+      [progress, Date.now(), id],
+    );
+  };
+
   return {
     initDatabase,
     getWishlist,
@@ -304,5 +314,6 @@ export function useDatabase() {
     addDownloadedBook,
     removeDownloadedBook,
     isDownloadedDB,
+    updateDownloadedProgressDB,
   };
 }
