@@ -9,7 +9,7 @@ interface AppHeaderProps {
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
-  title = 'Bibliothèque',
+  title = 'Shelve',
   subtitle,
   rightElement,
 }) => {

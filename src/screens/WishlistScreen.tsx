@@ -236,9 +236,10 @@ export const WishlistScreen: React.FC = () => {
       />
 
       <BookBottomSheet
+        key={selectedBook?.key || 'none'}
         book={selectedBook}
         visible={bottomSheetVisible}
-        onClose={() => setBottomSheetVisible(false)}
+        onClose={() => { setBottomSheetVisible(false); setSelectedBook(null); }}
       />
     </SafeAreaView>
   );

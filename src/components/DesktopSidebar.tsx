@@ -42,7 +42,7 @@ export const DesktopSidebar: React.FC = () => {
             <BookOpen size={20} color="#FFFFFF" />
           </View>
           <Text className="text-xl font-bold text-md-onSurface-light dark:text-md-onSurface-dark tracking-tight">
-            Bibliothèque
+            Shelve
           </Text>
         </View>
 

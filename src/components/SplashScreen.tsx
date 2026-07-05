@@ -100,7 +100,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
             className="text-[42px] font-bold tracking-tight"
             style={{ color: isDark ? '#E6E1E5' : '#1C1B1F', fontFamily: 'system-ui', letterSpacing: -1 }}
           >
-            Lib
+            Shelve
           </Text>
         </Animated.View>
 

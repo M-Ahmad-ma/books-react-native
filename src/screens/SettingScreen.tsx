@@ -68,7 +68,7 @@ export default function AboutScreen() {
             <BookOpen size={30} color="#FFFFFF" strokeWidth={1.5} />
           </View>
           <Text className="text-[32px] font-bold tracking-tight text-md-onSurface-light dark:text-md-onSurface-dark">
-            Bibliothèque
+            Shelve
           </Text>
           <Text className="text-md-body-large text-md-onSurfaceVariant-light dark:text-md-onSurfaceVariant-dark mt-2 text-center leading-6 max-w-lg">
             A quiet corner for the books you love and the ones still waiting.
@@ -115,7 +115,7 @@ export default function AboutScreen() {
           </View>
           <View className="pl-1">
             <Text className="text-md-body-medium text-md-onSurfaceVariant-light dark:text-md-onSurfaceVariant-dark leading-6">
-              Bibliothèque was born from a simple idea: that every great book deserves a second life. We bridge timeless public-domain works from Project Gutenberg and Open Library with modern readers who crave discovery without distraction.
+              Shelve was born from a simple idea: that every great book deserves a second life. We bridge timeless public-domain works from Project Gutenberg and Open Library with modern readers who crave discovery without distraction.
             </Text>
             <Text className="text-md-body-medium text-md-onSurfaceVariant-light dark:text-md-onSurfaceVariant-dark leading-6 mt-3">
               Browse trending titles, build your wishlist, track your reading progress, and pick up where you left off — all in one place. No ads. No noise. Just you and the words.
@@ -178,7 +178,7 @@ export default function AboutScreen() {
             </Text>
           </View>
           <Text className="text-md-label-small text-md-onSurfaceVariant-light dark:text-md-onSurfaceVariant-dark">
-            Bibliothèque v1.0
+            Shelve v1.0
           </Text>
         </View>
       </FadeIn>

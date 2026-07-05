@@ -193,7 +193,7 @@ if (Platform.OS !== 'web') {
           const fg = isDarkBg(bg) ? '#E6E1E5' : '#1C1B1F';
 
           html = html.replace('</head>', '<style>' +
-            'body{background-color:' + bg + '!important;color:' + fg + '!important;font-size:18px!important;line-height:1.8!important;max-width:720px!important;margin:0 auto!important;padding:16px 24px!important;}' +
+            'body{background-color:' + bg + '!important;color:' + fg + '!important;font-size:18px!important;line-height:1.8!important;max-width:720px!important;margin:0 auto!important;padding:14px 16px!important;}' +
             'p{text-align:justify!important;margin-bottom:16px!important;}' +
             'h1,h2,h3{color:' + fg + '!important;margin:24px 0 16px!important;}' +
             'a{color:#6750A4!important;}' +
@@ -329,7 +329,6 @@ export const ReaderScreen: React.FC = () => {
   const book = getReadingBook(bookId || '');
   const dlBook = useMemo(() => downloadedBooks.find(b => b.id === bookId), [downloadedBooks, bookId]);
   const savedProgress = book?.progress ?? dlBook?.progress ?? 0;
-  console.log('[Reader] Render - savedProgress:', savedProgress, '| book?.progress:', book?.progress, '| dlBook?.progress:', dlBook?.progress, '| localFile:', localFile, '| webViewReady:', webViewReady);
   const [cachedFileUri, setCachedFileUri] = useState<string | null>(null);
   const [cacheChecked, setCacheChecked] = useState(false);
   const gutenbergId = useMemo(() => localFile ? null : (book?.epubUrl ? getGutenbergId(book.epubUrl) : null), [book?.epubUrl, localFile]);
@@ -385,7 +384,6 @@ export const ReaderScreen: React.FC = () => {
   useEffect(() => {
     if (!webViewReady) return;
     const pct = progressRef.current;
-    console.log('[Reader] Preferences changed - re-injecting styles | localFile:', localFile, '| progressRef:', pct, '| theme:', preferences.theme, '| font:', preferences.font, '| fontSize:', preferences.fontSize);
     if (Platform.OS !== 'web' && webViewRef.current) {
       const injectStyles = generateInjectStyles();
       webViewRef.current.injectJavaScript(injectStyles);
@@ -424,8 +422,7 @@ export const ReaderScreen: React.FC = () => {
     if (savedProgress <= 0) return;
 
     restoreLaunchedRef.current = true;
-    const targetProgress = savedProgress; // snapshot at first ready — not affected by later scrolls
-    console.log('[Reader] Reactive restore - firing once with progress:', targetProgress);
+    const targetProgress = savedProgress;
 
     const retryDelays = [400, 800, 1400, 2200];
     retryDelays.forEach(delay => {
@@ -452,7 +449,7 @@ export const ReaderScreen: React.FC = () => {
       '  line-height: ' + preferences.lineHeight + ' !important;',
       '  max-width: 720px !important;',
       '  margin: 0 auto !important;',
-      '  padding: 16px 24px !important;',
+      '  padding: 14px 16px !important;',
       '}',
       'p { margin-bottom: 16px !important; text-align: justify !important; }',
       'h1, h2, h3, h4, h5, h6 { color: ' + themeColors.text + ' !important; margin: 24px 0 16px !important; }',
@@ -504,7 +501,6 @@ export const ReaderScreen: React.FC = () => {
         setContentRendered(true);
       } else if (data.type === 'progress-update') {
         const progress = Math.min(100, Math.max(0, Math.round(data.progress)));
-        console.log('[Reader] progress-update:', progress, '| book:', !!book, '| dlBook:', !!dlBook);
         setCurrentProgress(progress);
         if (progress > 0) {
           if (book) updateProgress(book.id, progress);
@@ -517,7 +513,6 @@ export const ReaderScreen: React.FC = () => {
   };
 
   const handleWebViewLoad = () => {
-    console.log('[Reader] handleWebViewLoad - savedProgress:', savedProgress, '| webViewReady before:', webViewReady, '| localFile:', localFile);
     setWebViewReady(true);
     setCurrentProgress(savedProgress);
     if (Platform.OS !== 'web' && webViewRef.current) {
@@ -529,13 +524,10 @@ export const ReaderScreen: React.FC = () => {
       if (savedProgress > 0) {
         setTimeout(() => {
           try {
-            console.log('[Reader] Attempting scroll restore to:', savedProgress);
             webViewRef.current.injectJavaScript(getScrollRestoreScript(savedProgress));
           } catch (e) {
           }
         }, 600);
-      } else {
-        console.log('[Reader] Skipping scroll restore - savedProgress is 0 at load');
       }
     }
     if (Platform.OS === 'web' && webFallbackRef.current) {
@@ -551,8 +543,6 @@ export const ReaderScreen: React.FC = () => {
           } catch (e) {
           }
         }, 800);
-      } else {
-        console.log('[Reader] Web fallback - skipping scroll restore, savedProgress:', savedProgress);
       }
     }
   };
@@ -650,7 +640,6 @@ export const ReaderScreen: React.FC = () => {
           return;
         }
       }
-      console.log('[Reader] Local file HTML regenerated | fromCache:', isFromCache, '| format:', format, '| theme:', preferences.theme, '| font:', preferences.font, '| fontSize:', preferences.fontSize);
       setLocalHtmlContent(generateHtml(raw));
     };
 

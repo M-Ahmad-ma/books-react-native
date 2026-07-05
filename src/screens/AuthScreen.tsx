@@ -41,7 +41,7 @@ function BrandPanel({ isDark, compact }: { isDark: boolean; compact: boolean }) 
         <BookOpen size={compact ? 28 : 44} color="#FFFFFF" strokeWidth={1.5} />
       </View>
       <Text className={`${compact ? 'text-3xl text-center' : 'text-5xl text-center w-full'} font-bold tracking-tight text-md-onSurface-light dark:text-md-onSurface-dark`}>
-        Bibliothèque
+        Shelve
       </Text>
       <Text className={`${compact ? 'text-md-body-large mt-2 text-center max-w-[300px] w-full' : 'text-xl mt-4 max-w-sm text-center w-full leading-7'} text-md-onSurfaceVariant-light dark:text-md-onSurfaceVariant-dark`}>
         A quiet corner for the books you love and the ones still waiting.

@@ -71,6 +71,8 @@ export const BookBottomSheet: React.FC<BookBottomSheetProps> = ({
   const [localVisible, setLocalVisible] = useState(false);
   const closingRef = useRef(false);
   const translateX = useSharedValue(DRAWER_WIDTH);
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevVisibleRef = useRef(false);
   const backdropOpacity = useSharedValue(0);
 
   const [localMatch, setLocalMatch] = useState<GutenbergBook | null>(null);
@@ -150,16 +152,33 @@ export const BookBottomSheet: React.FC<BookBottomSheetProps> = ({
 
   const isLargeScreen = desktop || tablet;
 
-  // BottomSheet visibility
+  // BottomSheet visibility — fire present()/dismiss() on visible transitions
   useEffect(() => {
-    if (!isLargeScreen && visible) {
-      bottomSheetRef.current?.present();
-    } else if (!isLargeScreen) {
-      bottomSheetRef.current?.dismiss();
-    }
-  }, [visible, isLargeScreen]);
+    if (isLargeScreen) return;
 
-  // Drawer animation with Reanimated (UI thread, 60fps)
+    const justOpened = visible && !prevVisibleRef.current;
+    const justClosed = !visible && prevVisibleRef.current;
+
+    if (justOpened) {
+      if (dismissTimerRef.current) {
+        clearTimeout(dismissTimerRef.current);
+        dismissTimerRef.current = setTimeout(() => {
+          dismissTimerRef.current = null;
+          bottomSheetRef.current?.present();
+        }, 400);
+      } else {
+        bottomSheetRef.current?.present();
+      }
+    } else if (justClosed) {
+      bottomSheetRef.current?.dismiss();
+      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+      dismissTimerRef.current = setTimeout(() => {
+        dismissTimerRef.current = null;
+      }, 500);
+    }
+
+    prevVisibleRef.current = visible;
+  }, [visible, isLargeScreen, book?.key]);
   useEffect(() => {
     if (isLargeScreen && visible) {
       if (closingRef.current) return;
