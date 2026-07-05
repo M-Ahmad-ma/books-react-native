@@ -329,12 +329,13 @@ export const ReaderScreen: React.FC = () => {
   const book = getReadingBook(bookId || '');
   const dlBook = useMemo(() => downloadedBooks.find(b => b.id === bookId), [downloadedBooks, bookId]);
   const savedProgress = book?.progress ?? dlBook?.progress ?? 0;
+  console.log('[Reader] Render - savedProgress:', savedProgress, '| book?.progress:', book?.progress, '| dlBook?.progress:', dlBook?.progress, '| localFile:', localFile, '| webViewReady:', webViewReady);
   const [cachedFileUri, setCachedFileUri] = useState<string | null>(null);
   const [cacheChecked, setCacheChecked] = useState(false);
   const gutenbergId = useMemo(() => localFile ? null : (book?.epubUrl ? getGutenbergId(book.epubUrl) : null), [book?.epubUrl, localFile]);
 
-  const themeColors = getThemeColors();
-  const fontFamily = getFontFamily();
+  const themeColors = useMemo(() => getThemeColors(), [preferences.theme]);
+  const fontFamily = useMemo(() => getFontFamily(), [preferences.font]);
 
   // FIX: Only hide loading when contentRendered is true AND a minimum time has passed
   useEffect(() => {
@@ -384,6 +385,7 @@ export const ReaderScreen: React.FC = () => {
   useEffect(() => {
     if (!webViewReady) return;
     const pct = progressRef.current;
+    console.log('[Reader] Preferences changed - re-injecting styles | localFile:', localFile, '| progressRef:', pct, '| theme:', preferences.theme, '| font:', preferences.font, '| fontSize:', preferences.fontSize);
     if (Platform.OS !== 'web' && webViewRef.current) {
       const injectStyles = generateInjectStyles();
       webViewRef.current.injectJavaScript(injectStyles);
@@ -409,19 +411,31 @@ export const ReaderScreen: React.FC = () => {
     }
   }, [webViewReady, preferences.theme, preferences.font, preferences.fontSize, preferences.lineHeight]);
 
-  // Reactive scroll restoration: retries when savedProgress becomes available after WebView loads
+  // Reactive scroll restoration: fires ONCE when savedProgress becomes available after webViewReady
+  // Uses a ref to capture the progress at the moment of first readiness — ignores later scroll updates
+  const restoreLaunchedRef = useRef(false);
+
   useEffect(() => {
-    if (!webViewReady || savedProgress <= 0) return;
+    if (!webViewReady) {
+      restoreLaunchedRef.current = false;
+      return;
+    }
+    if (restoreLaunchedRef.current) return;
+    if (savedProgress <= 0) return;
+
+    restoreLaunchedRef.current = true;
+    const targetProgress = savedProgress; // snapshot at first ready — not affected by later scrolls
+    console.log('[Reader] Reactive restore - firing once with progress:', targetProgress);
 
     const retryDelays = [400, 800, 1400, 2200];
     retryDelays.forEach(delay => {
       setTimeout(() => {
         try {
           if (Platform.OS !== 'web' && webViewRef.current) {
-            webViewRef.current.injectJavaScript(getScrollRestoreScript(savedProgress));
+            webViewRef.current.injectJavaScript(getScrollRestoreScript(targetProgress));
           }
           if (Platform.OS === 'web' && webFallbackRef.current) {
-            webFallbackRef.current.postMessage({ type: 'scroll-restore', progress: savedProgress });
+            webFallbackRef.current.postMessage({ type: 'scroll-restore', progress: targetProgress });
           }
         } catch (e) {}
       }, delay);
@@ -490,6 +504,7 @@ export const ReaderScreen: React.FC = () => {
         setContentRendered(true);
       } else if (data.type === 'progress-update') {
         const progress = Math.min(100, Math.max(0, Math.round(data.progress)));
+        console.log('[Reader] progress-update:', progress, '| book:', !!book, '| dlBook:', !!dlBook);
         setCurrentProgress(progress);
         if (progress > 0) {
           if (book) updateProgress(book.id, progress);
@@ -497,10 +512,12 @@ export const ReaderScreen: React.FC = () => {
         }
       }
     } catch (e) {
+      console.warn('[Reader] handleMessage error:', e);
     }
   };
 
   const handleWebViewLoad = () => {
+    console.log('[Reader] handleWebViewLoad - savedProgress:', savedProgress, '| webViewReady before:', webViewReady, '| localFile:', localFile);
     setWebViewReady(true);
     setCurrentProgress(savedProgress);
     if (Platform.OS !== 'web' && webViewRef.current) {
@@ -512,10 +529,13 @@ export const ReaderScreen: React.FC = () => {
       if (savedProgress > 0) {
         setTimeout(() => {
           try {
+            console.log('[Reader] Attempting scroll restore to:', savedProgress);
             webViewRef.current.injectJavaScript(getScrollRestoreScript(savedProgress));
           } catch (e) {
           }
         }, 600);
+      } else {
+        console.log('[Reader] Skipping scroll restore - savedProgress is 0 at load');
       }
     }
     if (Platform.OS === 'web' && webFallbackRef.current) {
@@ -531,6 +551,8 @@ export const ReaderScreen: React.FC = () => {
           } catch (e) {
           }
         }, 800);
+      } else {
+        console.log('[Reader] Web fallback - skipping scroll restore, savedProgress:', savedProgress);
       }
     }
   };
@@ -619,6 +641,7 @@ export const ReaderScreen: React.FC = () => {
 
     const loadFile = async () => {
       let raw = rawFileContentRef.current;
+      const isFromCache = !!raw;
       if (!raw) {
         try {
           raw = await FileSystem.readAsStringAsync(localFile, { encoding: FileSystem.EncodingType.UTF8 });
@@ -627,6 +650,7 @@ export const ReaderScreen: React.FC = () => {
           return;
         }
       }
+      console.log('[Reader] Local file HTML regenerated | fromCache:', isFromCache, '| format:', format, '| theme:', preferences.theme, '| font:', preferences.font, '| fontSize:', preferences.fontSize);
       setLocalHtmlContent(generateHtml(raw));
     };
 

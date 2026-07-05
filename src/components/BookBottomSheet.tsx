@@ -76,6 +76,7 @@ export const BookBottomSheet: React.FC<BookBottomSheetProps> = ({
   const [localMatch, setLocalMatch] = useState<GutenbergBook | null>(null);
   const [gutendexSummary, setGutendexSummary] = useState<string | null>(null);
   const [gutendexSubjects, setGutendexSubjects] = useState<string[] | null>(null);
+  const currentBookKeyRef = useRef<string | null>(null);
   const gutenbergMatch = localMatch || book?.gutenbergMatch;
 
   const isPublicDomain = !!gutenbergMatch;
@@ -99,15 +100,29 @@ export const BookBottomSheet: React.FC<BookBottomSheetProps> = ({
 
   useEffect(() => {
     if (visible && book) {
+      const thisKey = book.key;
+      currentBookKeyRef.current = thisKey;
+
+      // Clear stale data from previous book
+      setDesciption(null);
+      setGutendexSummary(null);
+      setGutendexSubjects(null);
+      setDownloadFormats([]);
+      setLoadingFormats(true);
+
       if (book.key && !book.gutenbergMatch?.summary) {
-        fetchDescription(book.key).then(data => setDesciption(data)).catch(() => setDesciption(null))
+        fetchDescription(book.key).then(data => {
+          if (currentBookKeyRef.current === thisKey) setDesciption(data);
+        }).catch(() => {
+          if (currentBookKeyRef.current === thisKey) setDesciption(null);
+        });
       }
       if (book.gutenbergMatch?.id && !book.gutenbergMatch?.summary) {
-        setGutendexSummary(null);
         const gId = book.gutenbergMatch.id;
         fetch(`${GUTENDEX_API}/${gId}`)
           .then(res => res.ok ? res.json() : null)
           .then(data => {
+            if (currentBookKeyRef.current !== thisKey) return;
             if (data?.summaries?.[0]) {
               setGutendexSummary(data.summaries[0]);
             }
@@ -115,14 +130,17 @@ export const BookBottomSheet: React.FC<BookBottomSheetProps> = ({
               setGutendexSubjects(data.subjects.slice(0, 10));
             }
           })
-          .catch(() => setGutendexSummary(null));
+          .catch(() => {
+            if (currentBookKeyRef.current === thisKey) setGutendexSummary(null);
+          });
       }
-      setLoadingFormats(true);
       getDownloadFormats(book).then(fmts => {
+        if (currentBookKeyRef.current !== thisKey) return;
         setDownloadFormats(fmts);
         setLoadingFormats(false);
       });
     } else {
+      currentBookKeyRef.current = null;
       setDesciption(null);
       setGutendexSummary(null);
       setGutendexSubjects(null);
@@ -634,7 +652,6 @@ export const BookBottomSheet: React.FC<BookBottomSheetProps> = ({
   // ---- Mobile: Bottom Sheet ----
   return (
     <BottomSheetModal
-      key={book.key}
       ref={bottomSheetRef}
       snapPoints={snapPoints}
       backdropComponent={renderBackdrop}

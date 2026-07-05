@@ -22,6 +22,7 @@ export const DownloadsProvider: React.FC<{ children: ReactNode }> = ({ children 
         const books = await getDownloadedBooks();
         setDownloadedBooks(books);
       } catch (error) {
+        console.warn('[DownloadsContext] init error:', error);
       }
     };
     init();
@@ -31,11 +32,16 @@ export const DownloadsProvider: React.FC<{ children: ReactNode }> = ({ children 
     try {
       await addDownloadedBook(book);
       setDownloadedBooks(prev => {
-        const exists = prev.find(b => b.id === book.id);
-        if (exists) return prev.map(b => b.id === book.id ? book : b);
+        const existing = prev.find(b => b.id === book.id);
+        if (existing) return prev.map(b =>
+          b.id === book.id
+            ? { ...book, progress: b.progress ?? book.progress ?? 0, lastReadAt: b.lastReadAt }
+            : b,
+        );
         return [book, ...prev];
       });
     } catch (error) {
+      console.warn('[DownloadsContext] addDownload error:', error);
     }
   }, []);
 
@@ -44,6 +50,7 @@ export const DownloadsProvider: React.FC<{ children: ReactNode }> = ({ children 
       await removeDownloadedBook(id);
       setDownloadedBooks(prev => prev.filter(b => b.id !== id));
     } catch (error) {
+      console.warn('[DownloadsContext] removeDownload error:', error);
     }
   }, []);
 
@@ -58,6 +65,7 @@ export const DownloadsProvider: React.FC<{ children: ReactNode }> = ({ children 
         ),
       );
     } catch (error) {
+      console.warn('[DownloadsContext] updateDownloadProgress error:', error);
     }
   }, []);
 

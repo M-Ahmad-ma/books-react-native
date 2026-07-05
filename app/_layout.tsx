@@ -76,6 +76,8 @@ const initDatabaseTables = async (db: SQLiteDatabase) => {
       downloadedAt INTEGER
     )
   `);
+  try { await db.execAsync('ALTER TABLE downloaded_books ADD COLUMN progress REAL DEFAULT 0'); } catch { }
+  try { await db.execAsync('ALTER TABLE downloaded_books ADD COLUMN lastReadAt INTEGER'); } catch { }
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS reader_preferences (
       id INTEGER PRIMARY KEY DEFAULT 1,

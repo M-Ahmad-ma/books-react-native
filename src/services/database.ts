@@ -260,8 +260,8 @@ export function useDatabase() {
   const addDownloadedBook = async (book: DownloadedBook): Promise<void> => {
     await db.runAsync(
       `INSERT OR REPLACE INTO downloaded_books
-       (id, title, author_name, cover_i, coverUrl, format, filePath, gutenbergId, downloadedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id, title, author_name, cover_i, coverUrl, format, filePath, gutenbergId, downloadedAt, progress, lastReadAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         book.id,
         book.title,
@@ -272,6 +272,8 @@ export function useDatabase() {
         book.filePath,
         book.gutenbergId || null,
         book.downloadedAt,
+        book.progress ?? 0,
+        book.lastReadAt ?? null,
       ],
     );
   };
